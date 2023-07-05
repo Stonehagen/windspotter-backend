@@ -33,5 +33,7 @@ httpServer.listen(process.env.PORT, () => {
   // eslint-disable-next-line no-console
   return console.log(`app listening on port ${process.env.PORT}!`);
 });
-
-ftp.downloadGribFiles();
+const lastUpdate = new Date('2023-07-05T18:00:00+02:00');
+ftp
+  .downloadGribFiles(process.env.GRIB_SERVER, process.env.GRIB_DICT, lastUpdate)
+  .then((data) => console.log(data.status));
