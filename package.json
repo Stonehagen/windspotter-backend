@@ -1,0 +1,28 @@
+{
+  "name": "windspotter-backend",
+  "version": "1.0.0",
+  "description": "Windspotter is an Web App to show wind forecast",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "start": "node ./src/index.js",
+    "devstart": "nodemon /src/index.js",
+    "serverstart": "DEBUG=windspotter-backend:* npm run devstart",
+    "test": "jest"
+  },
+  "homepage": "./",
+  "author": "Tobias Steinhagen",
+  "license": "ISC",
+  "dependencies": {
+    "basic-ftp": "^5.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "grib2json": "^1.0.2",
+    "mongoose": "^7.3.1"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "nodemon": "^2.0.22"
+  }
+}
