@@ -31,15 +31,17 @@ const getLatestUploadDate = (dirList, today) => {
   return new Date(Math.max.apply(null, modifiedTimes));
 };
 
-const downloadGribFiles = async (server, dict, databaseTimestamp) => {
+const downloadGribFiles = async (server, dict) => {
   let status;
   let data;
+  // get lastUpdate from database
+  const databaseTimestamp = new Date('2023-07-05T18:00:00+02:00');
   const lastHour = databaseTimestamp.getHours();
   const dateNow = new Date();
   const client = new ftp.Client();
 
   // enable logging to the console
-  client.ftp.verbose = true;
+  client.ftp.verbose = false;
 
   try {
     await client.access({
@@ -58,7 +60,7 @@ const downloadGribFiles = async (server, dict, databaseTimestamp) => {
         status = 'new';
         console.log('database shall be updated');
       } else {
-        status = 'uploading';
+        status = 'old';
         console.log('database is up to date');
       }
     } else {

@@ -2,9 +2,18 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const express = require('express');
 const http = require('http');
+const { CronJob } = require('cron');
 require('dotenv/config');
 
 const ftp = require('./ftp');
+
+const job = new CronJob(
+  '*/30 * * * *',
+  ftp.downloadGribFiles(process.env.GRIB_SERVER, process.env.GRIB_DICT),
+  null,
+  true,
+  'Europe/Berlin',
+);
 
 // mongoDB isnt available jet
 // eslint-disable-next-line operator-linebreak
@@ -33,7 +42,3 @@ httpServer.listen(process.env.PORT, () => {
   // eslint-disable-next-line no-console
   return console.log(`app listening on port ${process.env.PORT}!`);
 });
-const lastUpdate = new Date('2023-07-05T18:00:00+02:00');
-ftp
-  .downloadGribFiles(process.env.GRIB_SERVER, process.env.GRIB_DICT, lastUpdate)
-  .then((data) => console.log(data.status));
