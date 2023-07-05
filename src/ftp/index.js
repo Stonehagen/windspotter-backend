@@ -1,9 +1,8 @@
-// url for the grib forecast files
-// https://opendata.dwd.de/weather/nwp/icon-d2/grib
+require('dotenv/config');
 
 const ftp = require('basic-ftp');
 
-const downloadGribFiles = async () => {
+const downloadGribFiles = async (lastUpdate) => {
   const client = new ftp.Client();
 
   // enable logging to the console
@@ -11,9 +10,9 @@ const downloadGribFiles = async () => {
 
   try {
     await client.access({
-      host: 'opendata.dwd.de',
+      host: process.env.GRIB_SERVER,
     });
-    await client.cd('weather/nwp/icon-d2/grib');
+    await client.cd(process.env.GRIB_DICT);
     console.log(await client.list());
   } catch (err) {
     console.log(err);
