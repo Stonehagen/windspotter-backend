@@ -59,6 +59,23 @@ const downloadGribFiles = async (server, dict) => {
       if (serverTimestamp - dateNow < serverDataTimeDelay) {
         status = 'new';
         console.log('database shall be updated');
+
+        // eslint-disable-next-line no-restricted-syntax
+        for (const value of dataValues) {
+          // eslint-disable-next-line no-await-in-loop
+          let fileNames = await client.list(`./${value}`);
+          fileNames = fileNames
+            .map((fileInfo) => fileInfo.name)
+            .filter((name) => name.includes('regular-lat-lon_model') && name.includes('_1_'));
+          // eslint-disable-next-line no-restricted-syntax
+          for (const name of fileNames) {
+            // eslint-disable-next-line no-await-in-loop
+            await client.downloadTo(
+              `./grib_data/${nextUpdate}/${value}/${name}`,
+              `./${value}/${name}`,
+            );
+          }
+        }
       } else {
         status = 'old';
         console.log('database is up to date');
