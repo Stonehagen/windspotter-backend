@@ -66,7 +66,7 @@ const downloadGribFiles = async (server, dict) => {
           let fileNames = await client.list(`./${value}`);
           fileNames = fileNames
             .map((fileInfo) => fileInfo.name)
-            .filter((name) => name.includes('regular-lat-lon_model') && name.includes('_1_'));
+            .filter((name) => name.includes('regular-lat-lon_model') && name.includes('_65_'));
           // eslint-disable-next-line no-restricted-syntax
           for (const name of fileNames) {
             // eslint-disable-next-line no-await-in-loop
