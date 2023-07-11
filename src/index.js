@@ -6,6 +6,7 @@ const { CronJob } = require('cron');
 require('dotenv/config');
 const { updateDatabase } = require('./update_database');
 
+// eslint-disable-next-line no-unused-vars
 const job = new CronJob(
   '*/30 * * * *',
   updateDatabase(process.env.GRIB_SERVER, process.env.GRIB_DICT),
