@@ -4,22 +4,16 @@ const express = require('express');
 const http = require('http');
 const { CronJob } = require('cron');
 require('dotenv/config');
+const { updateDatabase } = require('./update_database');
 
-const ftp = require('./ftp');
-const { convertGrib } = require('./convert_grib');
+const job = new CronJob(
+  '*/30 * * * *',
+  updateDatabase(process.env.GRIB_SERVER, process.env.GRIB_DICT),
+  null,
+  true,
+  'Europe/Berlin',
+);
 
-// const job = new CronJob(
-//   '*/30 * * * *',
-//   ftp.downloadGribFiles(process.env.GRIB_SERVER, process.env.GRIB_DICT),
-//   null,
-//   true,
-//   'Europe/Berlin',
-// );
-convertGrib([
-  './grib_data/21/t/icon-d2_germany_regular-lat-lon_model-level_2023070521_000_65_t.grib2',
-  './grib_data/21/t/icon-d2_germany_regular-lat-lon_model-level_2023070521_001_65_t.grib2',
-]);
-// mongoDB isnt available jet
 // eslint-disable-next-line operator-linebreak
 // const mongoDB = process.env.MONGODB_URI;
 // mongoose.connect(mongoDB, { useUnifiedTopology: true, useNewUrlParser: true });

@@ -1,6 +1,6 @@
 const ftp = require('basic-ftp');
+const { dataValues } = require('../config');
 
-const dataValues = ['t', 'v', 'u'];
 const serverDataTimeDelay = 5 * 60 * 1000;
 
 const getNextTime = (lastTime, timeArray) => {
@@ -66,12 +66,16 @@ const downloadGribFiles = async (server, dict) => {
           let fileNames = await client.list(`./${value}`);
           fileNames = fileNames
             .map((fileInfo) => fileInfo.name)
-            .filter((name) => name.includes('regular-lat-lon_model') && name.includes('_65_'));
+            .filter(
+              (name) =>
+                // eslint-disable-next-line implicit-arrow-linebreak
+                name.includes('regular-lat-lon_model') && name.includes('_65_'),
+            );
           // eslint-disable-next-line no-restricted-syntax
           for (const name of fileNames) {
             // eslint-disable-next-line no-await-in-loop
             await client.downloadTo(
-              `./grib_data/${nextUpdate}/${value}/${name}`,
+              `./grib_data/${nextUpdate}/${name}`,
               `./${value}/${name}`,
             );
           }
@@ -88,6 +92,7 @@ const downloadGribFiles = async (server, dict) => {
     console.log(err);
   }
   client.close();
+  console.log('ftp done');
   return { status, data };
 };
 
