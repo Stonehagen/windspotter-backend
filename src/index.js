@@ -6,6 +6,13 @@ const { CronJob } = require('cron');
 require('dotenv/config');
 const { updateDatabase } = require('./update_database');
 
+// eslint-disable-next-line operator-linebreak
+const mongoDB = process.env.MONGODB_URI;
+mongoose.connect(mongoDB, { useUnifiedTopology: true, useNewUrlParser: true });
+const db = mongoose.connection;
+// eslint-disable-next-line no-console
+db.on('error', console.error.bind(console, 'mongo connection error'));
+
 // eslint-disable-next-line no-unused-vars
 const job = new CronJob(
   '*/30 * * * *',
@@ -14,13 +21,6 @@ const job = new CronJob(
   true,
   'Europe/Berlin',
 );
-
-// eslint-disable-next-line operator-linebreak
-// const mongoDB = process.env.MONGODB_URI;
-// mongoose.connect(mongoDB, { useUnifiedTopology: true, useNewUrlParser: true });
-// const db = mongoose.connection;
-// eslint-disable-next-line no-console
-// db.on('error', console.error.bind(console, 'mongo connection error'));
 
 const app = express();
 // http because in a future version i want to implement socket.io
