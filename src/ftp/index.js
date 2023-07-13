@@ -1,101 +1,94 @@
+/* eslint-disable operator-linebreak */
 const ftp = require('basic-ftp');
-const { dataValues } = require('../config');
+const { dataValues, fCModel, fCHeight } = require('../config');
 
 const serverDataTimeDelay = 5 * 60 * 1000;
 
-const getNextTime = (lastTime, timeArray) => {
-  const lastTimeIndex = timeArray.indexOf(lastTime.toString());
-  const newTimeIndex = (lastTimeIndex + 1) % timeArray.length;
-  return timeArray[newTimeIndex];
+const getNextForecastTime = (lastForecastTime, updateTimes) => {
+  const lastHour = lastForecastTime.getHours();
+  const lastTimeIndex = updateTimes.indexOf(lastHour.toString());
+  const newTimeIndex = (lastTimeIndex + 1) % updateTimes.length;
+  return updateTimes[newTimeIndex];
 };
 
-const getLatestUploadDate = (dirList, today) => {
+const getServerTimestamp = (fileList, dateNow) => {
   // reduce array to only get the important values
   // eslint-disable-next-line arrow-body-style
-  const dirArray = dirList.filter((fileInfo) => {
-    return dataValues.includes(fileInfo.name);
+  const sortedFiles = fileList.filter((file) => {
+    return dataValues.includes(file.name);
   });
 
-  const modifiedTimes = dirArray.map((fileInfo) => {
-    const modDate = fileInfo.rawModifiedAt.split(' ');
-    const d = new Date(
-      `${modDate[0]} ${modDate[1]}, ${today.getFullYear()} ${modDate[2]}+02:00`,
+  const fileTimestamps = sortedFiles.map((file) => {
+    const modDateArr = file.rawModifiedAt.split(' ');
+    const timestamp = new Date(
+      `${modDateArr[0]} ${modDateArr[1]}, ${dateNow.getFullYear()} ${
+        modDateArr[2]
+      }+02:00`,
     );
     // Jan 01 cornercase
-    if (d > today) {
-      d.setFullYear(d.getFullYear() - 1);
+    if (timestamp > dateNow) {
+      timestamp.setFullYear(timestamp.getFullYear() - 1);
     }
-    return d;
+    return timestamp;
   });
-
-  return new Date(Math.max.apply(null, modifiedTimes));
+  // return latest Timestamp from folder
+  return new Date(Math.max.apply(null, fileTimestamps));
 };
 
-const downloadGribFiles = async (server, dict) => {
-  let status;
-  let data;
-  // get lastUpdate from database
-  const databaseTimestamp = new Date('2023-07-05T18:00:00+02:00');
-  const lastHour = databaseTimestamp.getHours();
+const downloadFiles = async (server, dict, lastForecastTime) => {
   const dateNow = new Date();
-  const client = new ftp.Client();
 
+  const client = new ftp.Client();
   // enable logging to the console
   client.ftp.verbose = false;
+
+  let nextForecastTime;
 
   try {
     await client.access({
       host: server,
     });
-    let dirList = await client.list(dict);
-    const updateTimes = dirList.map((fileInfo) => fileInfo.name);
-    const nextUpdate = getNextTime(lastHour, updateTimes);
-    await client.cd(`${dict}/${nextUpdate}`);
-    dirList = await client.list();
-    const serverTimestamp = getLatestUploadDate(dirList, dateNow);
+    let fileList = await client.list(dict);
+    const forecastTimes = fileList.map((fileInfo) => fileInfo.name);
+    nextForecastTime = getNextForecastTime(lastForecastTime, forecastTimes);
+    await client.cd(`${dict}/${nextForecastTime}`);
+    fileList = await client.list();
+    const serverTimestamp = getServerTimestamp(fileList, dateNow);
 
     // check if new data is available
-    if (serverTimestamp > databaseTimestamp) {
-      if (serverTimestamp - dateNow < serverDataTimeDelay) {
-        status = 'new';
-        console.log('database shall be updated');
-
+    if (
+      serverTimestamp > lastForecastTime &&
+      serverTimestamp - dateNow < serverDataTimeDelay
+    ) {
+      // eslint-disable-next-line no-restricted-syntax
+      for (const value of dataValues) {
+        // eslint-disable-next-line no-await-in-loop
+        fileList = await client.list(`./${value}`);
+        fileList = fileList
+          .map((file) => file.name)
+          .filter((name) => name.includes(fCModel) && name.includes(fCHeight));
         // eslint-disable-next-line no-restricted-syntax
-        for (const value of dataValues) {
+        for (const file of fileList) {
           // eslint-disable-next-line no-await-in-loop
-          let fileNames = await client.list(`./${value}`);
-          fileNames = fileNames
-            .map((fileInfo) => fileInfo.name)
-            .filter(
-              (name) =>
-                // eslint-disable-next-line implicit-arrow-linebreak
-                name.includes('regular-lat-lon_model') && name.includes('_65_'),
-            );
-          // eslint-disable-next-line no-restricted-syntax
-          for (const name of fileNames) {
-            // eslint-disable-next-line no-await-in-loop
-            await client.downloadTo(
-              `./grib_data/${nextUpdate}/${name}`,
-              `./${value}/${name}`,
-            );
-          }
+          await client.downloadTo(
+            `./grib_data/${nextForecastTime}/${file}`,
+            `./${value}/${file}`,
+          );
         }
-      } else {
-        status = 'old';
-        console.log('database is up to date');
       }
     } else {
-      status = 'old';
       console.log('database is up to date');
+      return false;
     }
   } catch (err) {
     console.log(err);
+    return false;
   }
   client.close();
-  console.log('ftp done');
-  return { status, data };
+  console.log('new files has been downloaded');
+  return { nextForecastTime };
 };
 
 module.exports = {
-  downloadGribFiles,
+  downloadFiles,
 };

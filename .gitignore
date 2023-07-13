@@ -1,3 +1,10 @@
 .env
 node_modules
-grib_data
+grib_data/00/*
+grib_data/03/*
+grib_data/06/*
+grib_data/09/*
+grib_data/12/*
+grib_data/15/*
+grib_data/18/*
+grib_data/21/*
