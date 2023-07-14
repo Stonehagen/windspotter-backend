@@ -16,6 +16,7 @@ const decompressFiles = async (files, path) => {
     });
     fs.unlinkSync(`${path}/${file}`);
   }
+  // eslint-disable-next-line no-console
   console.log('Files extract');
 };
 
