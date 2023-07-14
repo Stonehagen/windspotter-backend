@@ -6,7 +6,7 @@ const { dataValues, fCModel, fCHeight } = require('../config');
 const serverDataTimeDelay = 5 * 60 * 1000;
 
 const getNextForecastTime = (lastForecastTime, updateTimes) => {
-  const lastHour = lastForecastTime.getHours();
+  const lastHour = `${lastForecastTime.getHours()}`.padStart(2, '0');
   const lastTimeIndex = updateTimes.indexOf(lastHour.toString());
   const newTimeIndex = (lastTimeIndex + 1) % updateTimes.length;
   return updateTimes[newTimeIndex];
@@ -87,7 +87,7 @@ const downloadFiles = async (server, dict, lastForecastTime) => {
   }
   client.close();
   console.log('new files has been downloaded');
-  return { nextForecastTime };
+  return nextForecastTime;
 };
 
 module.exports = {

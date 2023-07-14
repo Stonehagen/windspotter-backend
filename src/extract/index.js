@@ -14,7 +14,9 @@ const decompressFiles = async (files, path) => {
         }),
       ],
     });
-    fs.unlinkSync(`${path}/${file}`);
+    // eslint-disable-next-line no-await-in-loop
+    await fs.unlinkSync(`${path}/${file}`);
+    fs.chmodSync(`${path}/${file.match(regex)[0]}`, 0o755);
   }
   // eslint-disable-next-line no-console
   console.log('Files extract');

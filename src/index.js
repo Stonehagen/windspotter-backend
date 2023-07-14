@@ -1,7 +1,4 @@
-const cors = require('cors');
 const mongoose = require('mongoose');
-const express = require('express');
-const http = require('http');
 const { CronJob } = require('cron');
 require('dotenv/config');
 const { updateDatabase } = require('./update_database');
@@ -21,23 +18,3 @@ const job = new CronJob(
   true,
   'Europe/Berlin',
 );
-
-const app = express();
-// http because in a future version i want to implement socket.io
-const httpServer = http.createServer(app);
-
-// this is where the routes will be imported
-// const routes = require('./routes');
-
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// this is there the routes are listed
-// app.use('/forecast', routes.forecast);
-
-// eslint-disable-next-line arrow-body-style
-httpServer.listen(process.env.PORT, () => {
-  // eslint-disable-next-line no-console
-  return console.log(`app listening on port ${process.env.PORT}!`);
-});

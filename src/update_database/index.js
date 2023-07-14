@@ -31,23 +31,30 @@ const sortFiles = (files, value) => {
 const updateDatabase = async (server, dict, forecastName) => {
   const lastForecastTime = await getLastForecastTime(forecastName);
 
+  console.log('get files');
   const newForecasTime = await downloadFiles(server, dict, lastForecastTime);
   if (!newForecasTime) {
-    return null;
+    return false;
   }
+  console.log('download complete');
 
   const filePath = `./grib_data/${newForecasTime}`;
-  const files = getFiles(filePath);
-  // await decompressFiles(files, filePath);
+  const bz2Files = getFiles(filePath);
 
+  console.log('decompress files');
+  await decompressFiles(bz2Files, filePath);
+  console.log('decompression complete');
+
+  const gribFiles = getFiles(filePath);
+  console.log('update Database');
   // eslint-disable-next-line no-restricted-syntax
   for (const value of dataValues) {
-    const sortetFiles = sortFiles(files, value);
+    const sortetFiles = sortFiles(gribFiles, value);
     // eslint-disable-next-line no-await-in-loop
     await convertGrib(sortetFiles, filePath);
   }
   // eslint-disable-next-line no-restricted-syntax
-  for (const file of files) {
+  for (const file of gribFiles) {
     // eslint-disable-next-line no-await-in-loop
     await fs.unlinkSync(`${filePath}/${file}`);
   }
