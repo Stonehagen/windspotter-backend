@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /* eslint-disable operator-linebreak */
 const ftp = require('basic-ftp');
 const { dataValues, fCModel, fCHeight } = require('../config');
