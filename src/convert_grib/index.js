@@ -7,7 +7,7 @@
 const util = require('util');
 const mongoose = require('mongoose');
 const grib2json = require('grib2json').default;
-const { Spot, Forecast } = require('../models');
+const { ModelData, Forecast } = require('../models');
 
 const getJson = util.promisify(grib2json);
 
@@ -19,27 +19,12 @@ const getGribTimestamp = (gribTimeStr) => {
   return new Date(`${year}-${month}-${day}T${hour}:00:00+02:00`);
 };
 
-const getAbsoluteLon = (lonStart, lonEnd) => {
-  return lonStart > lonEnd ? lonEnd + 360 : lonEnd;
-};
-
 const getForecastInfo = (forecastHeader) => {
   const { lo1, lo2, la1, la2, dx, dy } = forecastHeader;
   return { lo1, lo2, la1, la2, dx, dy };
 };
 
-const getGribIndex = (forecastInfo, spot) => {
-  // check if end value for longitute is lower than start value
-  const lo2 = getAbsoluteLon(forecastInfo.lo1, forecastInfo.lo2);
-  const spotLon = getAbsoluteLon(forecastInfo.lo1, spot.lon);
-
-  const latRow = (spot.lat - forecastInfo.la1) / forecastInfo.dy;
-  const latWidth = (lo2 - forecastInfo.lo1) / forecastInfo.dx + 1;
-  const lonPos = (spotLon - forecastInfo.lo1) / forecastInfo.dx;
-  return latRow * latWidth + lonPos;
-};
-
-const populateDatabase = async (filename, spots) => {
+const populateDatabase = async (filename) => {
   // get forecast info from filename
   const regex = /(?<=_)[0-9]+_[0-9]+_[0-9]+_[A-Za-z]+(?=.grib)/;
   const regex2 = /(?<=\/)[A-Za-z]+(?=_)/;
@@ -59,24 +44,6 @@ const populateDatabase = async (filename, spots) => {
   // get grib info from header
   const forecastInfo = getForecastInfo(forecastJson[0].header);
 
-  // eslint-disable-next-line no-restricted-syntax
-  spots.forEach((spot) => {
-    const gribIndex = getGribIndex(forecastInfo, spot);
-
-    spot.timestamp = new Date();
-    if (spot[forecastType]) {
-      const tempForecastObject = { ...spot[forecastType] };
-      tempForecastObject[`${forecastName}_${forecastTime}`] =
-        forecastJson[0].data[Math.round(gribIndex)];
-      spot[forecastType] = tempForecastObject;
-    } else {
-      spot[forecastType] = {
-        [`${forecastName}_${forecastTime}`]:
-          forecastJson[0].data[Math.round(gribIndex)],
-      };
-    }
-  });
-
   let forecast = await Forecast.findOne({ name: forecastName });
   if (!forecast) {
     forecast = new Forecast({
@@ -89,6 +56,7 @@ const populateDatabase = async (filename, spots) => {
       la2: forecastInfo.la2,
       dy: forecastInfo.dy,
       dx: forecastInfo.dx,
+      datasets: [],
     });
   } else {
     forecast.timestamp = gribTimestamp;
@@ -99,23 +67,38 @@ const populateDatabase = async (filename, spots) => {
     forecast.dy = forecastInfo.dy;
     forecast.dx = forecastInfo.dx;
   }
+
+  let dataset = forecast.datasets.find(
+    (d) => d.time === forecastTime && d.datatype === forecastType,
+  );
+  if (!dataset) {
+    dataset = {
+      time: forecastTime,
+      datatype: forecastType,
+      data: new mongoose.Types.ObjectId(),
+    };
+    forecast.datasets.push(dataset);
+  }
+
+  let modelData = await ModelData.findById(dataset.data);
+  if (!modelData) {
+    modelData = new ModelData({
+      _id: dataset.data,
+      values: [],
+    });
+  }
+  modelData.values = forecastJson[0].data;
+
   await forecast.save();
+  await modelData.save();
 };
 
 const convertGrib = async (filenames, path) => {
-  const spots = await Spot.find({});
-  if (!spots) {
-    return false;
-  }
   try {
     // eslint-disable-next-line no-restricted-syntax
     for (const filename of filenames) {
       // eslint-disable-next-line no-await-in-loop
-      await populateDatabase(`${path}/${filename}`, spots);
-    }
-    // eslint-disable-next-line no-restricted-syntax
-    for (const spot of spots) {
-      await spot.save();
+      await populateDatabase(`${path}/${filename}`);
     }
   } catch (err) {
     // eslint-disable-next-line no-console
