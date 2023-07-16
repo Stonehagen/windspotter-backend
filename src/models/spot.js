@@ -7,9 +7,6 @@ const SpotSchema = new Schema({
   timestamp: { type: Date, default: null },
   lat: { type: Number, required: true },
   lon: { type: Number, required: true },
-  t: { type: Object },
-  v: { type: Object },
-  u: { type: Object },
 });
 
 module.exports = mongoose.model('Spot', SpotSchema);
