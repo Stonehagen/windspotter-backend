@@ -11,6 +11,13 @@ const ForecastSchema = new Schema({
   la2: { type: Number, required: true },
   dy: { type: Number, required: true },
   dx: { type: Number, required: true },
+  datasets: [
+    {
+      time: { type: String },
+      datatype: { type: String },
+      data: { type: Schema.Types.ObjectId, ref: 'ModelData' },
+    },
+  ],
 });
 
 module.exports = mongoose.model('Forecast', ForecastSchema);
