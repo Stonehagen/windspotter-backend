@@ -10,9 +10,9 @@ const { Forecast } = require('../models');
 const getLastForecastTime = async (forecastName) => {
   const forecast = await Forecast.findOne({ name: forecastName });
   if (!forecast) {
-    return '00';
+    return new Date(new Date().getTime() - 7 * 60 * 60 * 1000);
   }
-  return forecast.timestamp ? forecast.timestamp : '00';
+  return forecast.timestamp;
 };
 
 const getFiles = (filePath) => {
