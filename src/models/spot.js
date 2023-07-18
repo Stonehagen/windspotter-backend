@@ -7,6 +7,8 @@ const SpotSchema = new Schema({
   timestamp: { type: Date, default: null },
   lat: { type: Number, required: true },
   lon: { type: Number, required: true },
+  windDir: [{ type: String }],
+  features: [{ type: String }],
   t: { type: Object },
   v: { type: Object },
   u: { type: Object },
