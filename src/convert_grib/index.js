@@ -39,6 +39,20 @@ const getGribIndex = (forecastInfo, spot) => {
   return latRow * latWidth + lonPos;
 };
 
+const isBetween = (x, min, max) => {
+  return x >= min && x <= max;
+};
+
+const inGrid = (spot, forecastInfo) => {
+  const lo2 = getAbsoluteLon(forecastInfo.lo1, forecastInfo.lo2);
+  const spotLon = getAbsoluteLon(forecastInfo.lo1, spot.lon);
+
+  return (
+    isBetween(spot.lat, forecastInfo.la1, forecastInfo.la2) &&
+    isBetween(spotLon, forecastInfo.lo1, lo2)
+  );
+};
+
 const populateDatabase = async (filename, spots) => {
   // get forecast info from filename
   const regex = /(?<=_)[0-9]+_[0-9]+_[0-9]+_[A-Za-z]+(?=.grib)/;
@@ -61,18 +75,28 @@ const populateDatabase = async (filename, spots) => {
 
   // eslint-disable-next-line no-restricted-syntax
   spots.forEach((spot) => {
+    // check if spot is in model boarders
+    if (!inGrid(spot, forecastInfo)) {
+      return;
+    }
+
+    // if spot is % lat lon 0
+    // just get GribIndex
+    // else calculate
+
     const gribIndex = getGribIndex(forecastInfo, spot);
+
+    // calculate value
+    const dataValue = forecastJson[0].data[Math.round(gribIndex)];
 
     spot.timestamp = new Date();
     if (spot[forecastType]) {
       const tempForecastObject = { ...spot[forecastType] };
-      tempForecastObject[`${forecastName}_${forecastTime}`] =
-        forecastJson[0].data[Math.round(gribIndex)];
+      tempForecastObject[`${forecastName}_${forecastTime}`] = dataValue;
       spot[forecastType] = tempForecastObject;
     } else {
       spot[forecastType] = {
-        [`${forecastName}_${forecastTime}`]:
-          forecastJson[0].data[Math.round(gribIndex)],
+        [`${forecastName}_${forecastTime}`]: dataValue,
       };
     }
   });

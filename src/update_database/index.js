@@ -5,7 +5,7 @@ const { downloadFiles } = require('../ftp');
 // eslint-disable-next-line no-unused-vars
 const { decompressFiles } = require('../extract');
 const { convertGrib } = require('../convert_grib');
-const { Forecast } = require('../models');
+const { Forecast, Spot } = require('../models');
 
 const getLastForecastTime = async (forecastName) => {
   const forecast = await Forecast.findOne({ name: forecastName });
