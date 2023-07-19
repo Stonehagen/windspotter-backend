@@ -53,6 +53,42 @@ const inGrid = (spot, forecastInfo) => {
   );
 };
 
+const getMinPoint = (point, delta) => {
+  return point % delta === 0 ? point : point - (point % delta);
+};
+
+const getMaxPoint = (point, delta) => {
+  return point % delta === 0 ? point : point - (point % delta) + delta;
+};
+
+const calculateDataValue = (spot, forecastInfo, forecastData) => {
+  const spotLon = getAbsoluteLon(forecastInfo.lo1, spot.lon);
+
+  const minLon = getMinPoint(spotLon, forecastInfo.dx);
+  const maxLon = getMaxPoint(spotLon, forecastInfo.dx);
+  const minLat = getMinPoint(spot.lat, forecastInfo.dy);
+  const maxLat = getMaxPoint(spot.lat, forecastInfo.dy);
+
+  const posA = { lon: minLon, lat: minLat };
+  const posB = { lon: maxLon, lat: minLat };
+  const posC = { lon: maxLon, lat: maxLat };
+  const posD = { lon: minLon, lat: maxLat };
+
+  const valueA = forecastData[Math.round(getGribIndex(forecastInfo, posA))];
+  const valueB = forecastData[Math.round(getGribIndex(forecastInfo, posB))];
+  const valueC = forecastData[Math.round(getGribIndex(forecastInfo, posC))];
+  const valueD = forecastData[Math.round(getGribIndex(forecastInfo, posD))];
+
+  const valueAB =
+    valueA + ((valueB - valueA) * (spotLon - minLon)) / forecastInfo.dx;
+  const valueDC =
+    valueD + ((valueC - valueD) * (spotLon - minLon)) / forecastInfo.dx;
+
+  return (
+    valueAB + ((valueDC - valueAB) * (spot.lat - minLat)) / forecastInfo.dy
+  );
+};
+
 const populateDatabase = async (filename, spots) => {
   // get forecast info from filename
   const regex = /(?<=_)[0-9]+_[0-9]+_[0-9]+_[A-Za-z]+(?=.grib)/;
@@ -79,15 +115,12 @@ const populateDatabase = async (filename, spots) => {
     if (!inGrid(spot, forecastInfo)) {
       return;
     }
-
-    // if spot is % lat lon 0
-    // just get GribIndex
-    // else calculate
-
-    const gribIndex = getGribIndex(forecastInfo, spot);
-
     // calculate value
-    const dataValue = forecastJson[0].data[Math.round(gribIndex)];
+    const dataValue = calculateDataValue(
+      spot,
+      forecastInfo,
+      forecastJson[0].data,
+    );
 
     spot.timestamp = new Date();
     if (spot[forecastType]) {
