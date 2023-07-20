@@ -15,7 +15,6 @@
   "license": "ISC",
   "dependencies": {
     "basic-ftp": "^5.0.3",
-    "bz2": "^1.0.1",
     "cron": "^2.3.1",
     "decompress": "^4.2.1",
     "decompress-bzip2": "^4.0.0",
