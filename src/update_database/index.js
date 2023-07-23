@@ -38,14 +38,7 @@ const updateDatabase = async (server, dict, forecastName) => {
   }
   console.log('download complete');
 
-  const filePath = `./grib_data/${newForecasTime}`;
-  const bz2Files = getFiles(filePath);
-
-  console.log('decompress files');
-  await decompressFiles(bz2Files, filePath);
-  console.log('decompression complete');
-
-  const gribFiles = getFiles(filePath);
+  const gribFiles = getFiles('./grib_data');
   console.log('update Database');
   // eslint-disable-next-line no-restricted-syntax
   for (const value of dataValues) {
