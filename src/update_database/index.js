@@ -44,12 +44,12 @@ const updateDatabase = async (server, dict, forecastName) => {
   for (const value of dataValues) {
     const sortetFiles = sortFiles(gribFiles, value);
     // eslint-disable-next-line no-await-in-loop
-    await convertGrib(sortetFiles, filePath);
+    await convertGrib(sortetFiles, './grib_data');
   }
   // eslint-disable-next-line no-restricted-syntax
   for (const file of gribFiles) {
     // eslint-disable-next-line no-await-in-loop
-    await fs.unlinkSync(`${filePath}/${file}`);
+    await fs.unlinkSync(`./grib_data/${file}`);
   }
 
   // eslint-disable-next-line no-console
