@@ -11,21 +11,30 @@ const { Spot, Forecast } = require('../models');
 
 const getJson = util.promisify(grib2json);
 
-const getGribTimestamp = (gribTimeStr) => {
-  const year = gribTimeStr.slice(0, 4);
-  const month = gribTimeStr.slice(4, 6);
-  const day = gribTimeStr.slice(6, 8);
-  const hour = gribTimeStr.slice(8, 10);
-  return new Date(`${year}-${month}-${day}T${hour}:00:00+02:00`);
-};
-
 const getAbsoluteLon = (lonStart, lonEnd) => {
   return lonStart > lonEnd ? lonEnd + 360 : lonEnd;
 };
 
-const getForecastInfo = (forecastHeader) => {
-  const { lo1, lo2, la1, la2, dx, dy } = forecastHeader;
-  return { lo1, lo2, la1, la2, dx, dy };
+const getForecastInfo = (
+  { lo1, lo2, la1, la2, dx, dy, refTime, forecastTime },
+  filename,
+) => {
+  const regex = /(?<=_)[0-9]+_[0-9]+_[0-9]+_[A-Za-z]+(?=.grib)/;
+  const regex2 = /(?<=\/)[A-Za-z]+(?=_)/;
+  const forecastType = filename.match(regex)[0].split('_')[3];
+  const forecastName = filename.match(regex2)[0];
+  return {
+    forecastName,
+    forecastType,
+    refTime,
+    forecastTime,
+    lo1,
+    lo2,
+    la1,
+    la2,
+    dx,
+    dy,
+  };
 };
 
 const getGribIndex = (forecastInfo, spot) => {
@@ -89,25 +98,15 @@ const calculateDataValue = (spot, forecastInfo, forecastData) => {
   );
 };
 
-const populateDatabase = async (filename, spots) => {
-  // get forecast info from filename
-  const regex = /(?<=_)[0-9]+_[0-9]+_[0-9]+_[A-Za-z]+(?=.grib)/;
-  const regex2 = /(?<=\/)[A-Za-z]+(?=_)/;
-  const fileInfos = filename.match(regex)[0].split('_');
-  const forecastName = filename.match(regex2)[0];
-  const gribTimeStr = fileInfos[0];
-  const forecastTime = fileInfos[1];
-  const forecastType = fileInfos[3];
-  const gribTimestamp = getGribTimestamp(gribTimeStr);
-
+const populateSpots = async (filename, spots) => {
   const forecastJson = await getJson(filename, {
     scriptPath: './src/convert_grib/grib2json/src/bin/grib2json',
     names: true, // (default false): Return descriptive names too
     data: true, // (default false): Return data, not just headers
   });
 
-  // get grib info from header
-  const forecastInfo = getForecastInfo(forecastJson[0].header);
+  // get grib info from header and filename
+  const forecastInfo = getForecastInfo(forecastJson[0].header, filename);
 
   // eslint-disable-next-line no-restricted-syntax
   spots.forEach((spot) => {
@@ -123,23 +122,26 @@ const populateDatabase = async (filename, spots) => {
     );
 
     spot.timestamp = new Date();
-    if (spot[forecastType]) {
-      const tempForecastObject = { ...spot[forecastType] };
-      tempForecastObject[`${forecastName}_${forecastTime}`] = dataValue;
-      spot[forecastType] = tempForecastObject;
+    if (spot[forecastInfo.forecastType]) {
+      const tempForecastObject = { ...spot[forecastInfo.forecastType] };
+      tempForecastObject[
+        `${forecastInfo.forecastName}_${forecastInfo.forecastTime}`
+      ] = dataValue;
+      spot[forecastInfo.forecastType] = tempForecastObject;
     } else {
-      spot[forecastType] = {
-        [`${forecastName}_${forecastTime}`]: dataValue,
+      spot[forecastInfo.forecastType] = {
+        [`${forecastInfo.forecastName}_${forecastInfo.forecastTime}`]:
+          dataValue,
       };
     }
   });
 
-  let forecast = await Forecast.findOne({ name: forecastName });
+  let forecast = await Forecast.findOne({ name: forecastInfo.forecastName });
   if (!forecast) {
     forecast = new Forecast({
       _id: new mongoose.Types.ObjectId(),
-      timestamp: gribTimestamp,
-      name: forecastName,
+      timestamp: forecastInfo.refTime,
+      name: forecastInfo.forecastName,
       lo1: forecastInfo.lo1,
       lo2: forecastInfo.lo2,
       la1: forecastInfo.la1,
@@ -148,7 +150,7 @@ const populateDatabase = async (filename, spots) => {
       dx: forecastInfo.dx,
     });
   } else {
-    forecast.timestamp = gribTimestamp;
+    forecast.timestamp = forecastInfo.refTime;
     forecast.lo1 = forecastInfo.lo1;
     forecast.lo2 = forecastInfo.lo2;
     forecast.la1 = forecastInfo.la1;
@@ -168,7 +170,7 @@ const convertGrib = async (filenames, path) => {
     // eslint-disable-next-line no-restricted-syntax
     for (const filename of filenames) {
       // eslint-disable-next-line no-await-in-loop
-      await populateDatabase(`${path}/${filename}`, spots);
+      await populateSpots(`${path}/${filename}`, spots);
     }
     // eslint-disable-next-line no-restricted-syntax
     for (const spot of spots) {
