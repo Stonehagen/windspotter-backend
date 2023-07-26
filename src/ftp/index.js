@@ -1,30 +1,35 @@
-/* eslint-disable no-console */
 /* eslint-disable operator-linebreak */
+/* eslint-disable no-await-in-loop */
+/* eslint-disable no-restricted-syntax */
+const fs = require('fs');
 const ftp = require('basic-ftp');
+const decompress = require('decompress');
+const decompressBzip2 = require('decompress-bzip2');
+
 const { dataValues, fCModel, fCHeight } = require('../config');
 
-const serverDataTimeDelay = 5 * 60 * 1000;
-
-const getNextForecastTime = (lastForecastTime, updateTimes) => {
-  const lastHour = `${lastForecastTime.getHours()}`.padStart(2, '0');
-  const lastTimeIndex = updateTimes.indexOf(lastHour.toString());
-  const newTimeIndex = (lastTimeIndex + 1) % updateTimes.length;
-  return updateTimes[newTimeIndex];
+const getNextForecastTime = (forecastTimes) => {
+  // convert Strings into Numbers
+  const forecastTimesNumbers = forecastTimes.map((hour) => parseInt(hour, 10));
+  // get the hour of the current time
+  const hourNow = new Date().getUTCHours();
+  // get the latest forcastTime to hour current time
+  const nextForecastTime = Math.max(
+    ...forecastTimesNumbers.filter((hour) => hour <= hourNow),
+  );
+  // return the number as string with leading zeros
+  return String(nextForecastTime).padStart(2, '0');
 };
 
-const getServerTimestamp = (fileList, dateNow) => {
-  // reduce array to only get the important values
-  // eslint-disable-next-line arrow-body-style
-  const sortedFiles = fileList.filter((file) => {
-    return dataValues.includes(file.name);
-  });
-
-  const fileTimestamps = sortedFiles.map((file) => {
+const getFileTimestamps = (files) => {
+  const dateNow = new Date();
+  return files.map((file) => {
+    // split the date Sting and create a timestamp from it
     const modDateArr = file.rawModifiedAt.split(' ');
     const timestamp = new Date(
       `${modDateArr[0]} ${modDateArr[1]}, ${dateNow.getFullYear()} ${
         modDateArr[2]
-      }+02:00`,
+      }+00:00`,
     );
     // Jan 01 cornercase
     if (timestamp > dateNow) {
@@ -32,62 +37,78 @@ const getServerTimestamp = (fileList, dateNow) => {
     }
     return timestamp;
   });
-  // return latest Timestamp from folder
-  return new Date(Math.max.apply(null, fileTimestamps));
 };
 
-const downloadFiles = async (server, dict, lastForecastTime) => {
-  const dateNow = new Date();
+const decompressFile = async (file, path) => {
+  const regex = /.*(?=.bz2)/;
+  await decompress(`${path}/${file}`, './', {
+    plugins: [
+      decompressBzip2({
+        path: `${path}/${file.match(regex)[0]}`,
+      }),
+    ],
+  });
+  await fs.unlinkSync(`${path}/${file}`);
+  fs.chmodSync(`${path}/${file.match(regex)[0]}`, 0o755);
+};
 
+const getServerTimestamp = (fileList) => {
+  // reduce array to only get the required values
+  const sortedFiles = fileList.filter((file) => dataValues.includes(file.name));
+  const fileTimestamps = getFileTimestamps(sortedFiles);
+  // return latest Timestamp from folder
+  return new Date(Math.max(...fileTimestamps));
+};
+
+const downloadFiles = async (databaseTimestamp = new Date(0)) => {
+  const server = 'opendata.dwd.de';
+  const dict = 'weather/nwp/icon-d2/grib';
   const client = new ftp.Client();
-  // enable logging to the console
-  client.ftp.verbose = false;
-
-  let nextForecastTime;
 
   try {
     await client.access({
       host: server,
     });
-    let fileList = await client.list(dict);
-    const forecastTimes = fileList.map((fileInfo) => fileInfo.name);
-    nextForecastTime = getNextForecastTime(lastForecastTime, forecastTimes);
+    // get a list of folders from the given ftp path
+    const dirList = await client.list(dict);
+    // convert list of folders to list of folderNames (forecastTimes)
+    const forecastTimes = dirList.map((folderInfo) => folderInfo.name);
+    // get the latest forecast folder name
+    const nextForecastTime = getNextForecastTime(forecastTimes);
     await client.cd(`${dict}/${nextForecastTime}`);
-    fileList = await client.list();
-    const serverTimestamp = getServerTimestamp(fileList, dateNow);
-
-    // check if new data is available
+    const fileList = await client.list();
+    // get the last update time from the requested files
+    const serverTimestamp = getServerTimestamp(fileList);
+    // check if the files are older than the data in our database
     if (
-      serverTimestamp > lastForecastTime &&
-      serverTimestamp - dateNow < serverDataTimeDelay
+      serverTimestamp.get < databaseTimestamp ||
+      serverTimestamp - new Date() < 5 * 60 * 1000
     ) {
-      // eslint-disable-next-line no-restricted-syntax
-      for (const value of dataValues) {
-        // eslint-disable-next-line no-await-in-loop
-        fileList = await client.list(`./${value}`);
-        fileList = fileList
-          .map((file) => file.name)
-          .filter((name) => name.includes(fCModel) && name.includes(fCHeight));
-        // eslint-disable-next-line no-restricted-syntax
-        for (const file of fileList) {
-          // eslint-disable-next-line no-await-in-loop
-          await client.downloadTo(
-            `./grib_data/${nextForecastTime}/${file}`,
-            `./${value}/${file}`,
-          );
-        }
-      }
-    } else {
       console.log('database is up to date');
-      return false;
+      client.close();
+      return null;
     }
+
+    // create a list of the files und download them
+    for (const value of dataValues) {
+      let clientList = await client.list(`./${value}`);
+      // filter out the unwanted files
+      clientList = clientList
+        .map((file) => file.name)
+        .filter((name) => name.includes(fCModel) && name.includes(fCHeight));
+      // download file per file
+      for (const file of clientList) {
+        await client.downloadTo(`./grib_data/${file}`, `./${value}/${file}`);
+        await decompressFile(file, './grib_data/');
+      }
+    }
+    console.log('download complete');
+    client.close();
+    return nextForecastTime;
   } catch (err) {
     console.log(err);
     return false;
   }
-  client.close();
-  console.log('new files has been downloaded');
-  return nextForecastTime;
 };
 
 module.exports = {
