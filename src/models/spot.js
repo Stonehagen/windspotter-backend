@@ -4,14 +4,9 @@ const { Schema } = mongoose;
 
 const SpotSchema = new Schema({
   name: { type: String, required: true, maxLength: 100 },
-  timestamp: { type: Date, default: null },
   lat: { type: Number, required: true },
   lon: { type: Number, required: true },
-  windDir: [{ type: String }],
-  features: [{ type: String }],
-  t: { type: Object },
-  v: { type: Object },
-  u: { type: Object },
+  forecasts: [{ type: Schema.Types.ObjectId, ref: 'Forecast' }],
 });
 
 module.exports = mongoose.model('Spot', SpotSchema);

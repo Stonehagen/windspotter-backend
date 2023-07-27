@@ -1,7 +1,9 @@
-const Spot = require('./spot');
 const Forecast = require('./forecast');
+const ForecastInfo = require('./forecastinfo');
+const Spot = require('./spot');
 
 module.exports = {
-  Spot,
   Forecast,
+  ForecastInfo,
+  Spot,
 };
