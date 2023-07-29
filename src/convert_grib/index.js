@@ -121,6 +121,7 @@ const populateSpots = async (filename, spots) => {
       forecastJson[0].data,
     );
 
+    // to be refactored
     spot.timestamp = new Date();
     if (spot[forecastInfo.forecastType]) {
       const tempForecastObject = { ...spot[forecastInfo.forecastType] };
