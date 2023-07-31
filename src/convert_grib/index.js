@@ -70,32 +70,27 @@ const getMaxPoint = (point, delta) => {
   return point % delta === 0 ? point : point - (point % delta) + delta;
 };
 
-const calculateDataValue = (spot, forecastInfo, forecastData) => {
-  const spotLon = getAbsoluteLon(forecastInfo.lo1, spot.lon);
+const calculateDataValue = (spot, info, forecastData) => {
+  // bilinear interpolation for 4 points around spot position
+  // https://en.wikipedia.org/wiki/Bilinear_interpolation
+  const x = getAbsoluteLon(info.lo1, spot.lon);
+  const y = spot.lat;
+  const x1 = getMinPoint(x, info.dx);
+  const x2 = getMaxPoint(x, info.dx);
+  const y1 = getMinPoint(y, info.dy);
+  const y2 = getMaxPoint(y, info.dy);
 
-  const minLon = getMinPoint(spotLon, forecastInfo.dx);
-  const maxLon = getMaxPoint(spotLon, forecastInfo.dx);
-  const minLat = getMinPoint(spot.lat, forecastInfo.dy);
-  const maxLat = getMaxPoint(spot.lat, forecastInfo.dy);
+  const Q11 = forecastData[getGribIndex(info, { lon: x1, lat: y1 })];
+  const Q21 = forecastData[getGribIndex(info, { lon: x2, lat: y1 })];
+  const Q22 = forecastData[getGribIndex(info, { lon: x2, lat: y2 })];
+  const Q12 = forecastData[getGribIndex(info, { lon: x1, lat: y2 })];
 
-  const posA = { lon: minLon, lat: minLat };
-  const posB = { lon: maxLon, lat: minLat };
-  const posC = { lon: maxLon, lat: maxLat };
-  const posD = { lon: minLon, lat: maxLat };
+  const R1 = ((x2 - x) / (x2 - x1)) * Q11 + ((x - x1) / (x2 - x1)) * Q21;
+  const R2 = ((x2 - x) / (x2 - x1)) * Q12 + ((x - x1) / (x2 - x1)) * Q22;
 
-  const valueA = forecastData[Math.round(getGribIndex(forecastInfo, posA))];
-  const valueB = forecastData[Math.round(getGribIndex(forecastInfo, posB))];
-  const valueC = forecastData[Math.round(getGribIndex(forecastInfo, posC))];
-  const valueD = forecastData[Math.round(getGribIndex(forecastInfo, posD))];
+  const P = ((y2 - y) / (y2 - y1)) * R1 + ((y - y1) / (y2 - y1)) * R2;
 
-  const valueAB =
-    valueA + ((valueB - valueA) * (spotLon - minLon)) / forecastInfo.dx;
-  const valueDC =
-    valueD + ((valueC - valueD) * (spotLon - minLon)) / forecastInfo.dx;
-
-  return (
-    valueAB + ((valueDC - valueAB) * (spot.lat - minLat)) / forecastInfo.dy
-  );
+  return P;
 };
 
 const populateSpots = async (filename, spots) => {
