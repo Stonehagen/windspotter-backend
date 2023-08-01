@@ -1,21 +1,18 @@
-/* eslint-disable arrow-body-style */
-/* eslint-disable no-await-in-loop */
-/* eslint-disable no-param-reassign */
-/* eslint-disable operator-linebreak */
-/* eslint-disable object-curly-newline */
 /* eslint-disable implicit-arrow-linebreak */
-const util = require('util');
+/* eslint-disable no-underscore-dangle */
+/* eslint-disable arrow-body-style */
+/* eslint-disable object-curly-newline */
+/* eslint-disable no-console */
+/* eslint-disable no-restricted-syntax */
+/* eslint-disable no-await-in-loop */
 const mongoose = require('mongoose');
+const util = require('util');
 const grib2json = require('grib2json').default;
-const { Spot, Forecast } = require('../models');
+const { Spot, Forecast, ForecastInfo } = require('../models');
 
 const getJson = util.promisify(grib2json);
 
-const getAbsoluteLon = (lonStart, lonEnd) => {
-  return lonStart > lonEnd ? lonEnd + 360 : lonEnd;
-};
-
-const getForecastInfo = (
+const getforecastHeader = (
   { lo1, lo2, la1, la2, dx, dy, refTime, forecastTime },
   filename,
 ) => {
@@ -37,28 +34,51 @@ const getForecastInfo = (
   };
 };
 
-const getGribIndex = (forecastInfo, spot) => {
-  // check if end value for longitute is lower than start value
-  const lo2 = getAbsoluteLon(forecastInfo.lo1, forecastInfo.lo2);
-  const spotLon = getAbsoluteLon(forecastInfo.lo1, spot.lon);
+const getForecastInfo = async (forecastHeader) => {
+  let forecastInfo = await ForecastInfo.findOne({
+    name: forecastHeader.forecastName,
+  });
 
-  const latRow = (spot.lat - forecastInfo.la1) / forecastInfo.dy;
-  const latWidth = (lo2 - forecastInfo.lo1) / forecastInfo.dx + 1;
-  const lonPos = (spotLon - forecastInfo.lo1) / forecastInfo.dx;
-  return latRow * latWidth + lonPos;
+  if (!forecastInfo) {
+    forecastInfo = new ForecastInfo({
+      _id: new mongoose.Types.ObjectId(),
+      name: forecastHeader.forecastName,
+      time: forecastHeader.refTime,
+      lo1: forecastHeader.lo1,
+      lo2: forecastHeader.lo2,
+      la1: forecastHeader.la1,
+      la2: forecastHeader.la2,
+      dy: forecastHeader.dy,
+      dx: forecastHeader.dx,
+    });
+  } else {
+    forecastInfo.time = forecastHeader.refTime;
+    forecastInfo.lo1 = forecastHeader.lo1;
+    forecastInfo.lo2 = forecastHeader.lo2;
+    forecastInfo.la1 = forecastHeader.la1;
+    forecastInfo.la2 = forecastHeader.la2;
+    forecastInfo.dy = forecastHeader.dy;
+    forecastInfo.dx = forecastHeader.dx;
+  }
+
+  return forecastInfo;
+};
+
+const getAbsoluteLon = (lonStart, lonEnd) => {
+  return lonStart > lonEnd ? lonEnd + 360 : lonEnd;
 };
 
 const isBetween = (x, min, max) => {
   return x >= min && x <= max;
 };
 
-const inGrid = (spot, forecastInfo) => {
-  const lo2 = getAbsoluteLon(forecastInfo.lo1, forecastInfo.lo2);
-  const spotLon = getAbsoluteLon(forecastInfo.lo1, spot.lon);
+const inGrid = (spot, forecastHeader) => {
+  const lo2 = getAbsoluteLon(forecastHeader.lo1, forecastHeader.lo2);
+  const spotLon = getAbsoluteLon(forecastHeader.lo1, spot.lon);
 
   return (
-    isBetween(spot.lat, forecastInfo.la1, forecastInfo.la2) &&
-    isBetween(spotLon, forecastInfo.lo1, lo2)
+    isBetween(spot.lat, forecastHeader.la1, forecastHeader.la2) &&
+    isBetween(spotLon, forecastHeader.lo1, lo2)
   );
 };
 
@@ -70,20 +90,31 @@ const getMaxPoint = (point, delta) => {
   return point % delta === 0 ? point : point - (point % delta) + delta;
 };
 
-const calculateDataValue = (spot, info, forecastData) => {
+const getGribIndex = (forecastHeader, spot) => {
+  // check if end value for longitute is lower than start value
+  const lo2 = getAbsoluteLon(forecastHeader.lo1, forecastHeader.lo2);
+  const spotLon = getAbsoluteLon(forecastHeader.lo1, spot.lon);
+
+  const latRow = (spot.lat - forecastHeader.la1) / forecastHeader.dy;
+  const latWidth = (lo2 - forecastHeader.lo1) / forecastHeader.dx + 1;
+  const lonPos = (spotLon - forecastHeader.lo1) / forecastHeader.dx;
+  return Math.round(latRow * latWidth + lonPos);
+};
+
+const calculateDataValue = (spot, forecastHeader, forecastData) => {
   // bilinear interpolation for 4 points around spot position
   // https://en.wikipedia.org/wiki/Bilinear_interpolation
-  const x = getAbsoluteLon(info.lo1, spot.lon);
+  const x = getAbsoluteLon(forecastHeader.lo1, spot.lon);
   const y = spot.lat;
-  const x1 = getMinPoint(x, info.dx);
-  const x2 = getMaxPoint(x, info.dx);
-  const y1 = getMinPoint(y, info.dy);
-  const y2 = getMaxPoint(y, info.dy);
+  const x1 = getMinPoint(x, forecastHeader.dx);
+  const x2 = getMaxPoint(x, forecastHeader.dx);
+  const y1 = getMinPoint(y, forecastHeader.dy);
+  const y2 = getMaxPoint(y, forecastHeader.dy);
 
-  const Q11 = forecastData[getGribIndex(info, { lon: x1, lat: y1 })];
-  const Q21 = forecastData[getGribIndex(info, { lon: x2, lat: y1 })];
-  const Q22 = forecastData[getGribIndex(info, { lon: x2, lat: y2 })];
-  const Q12 = forecastData[getGribIndex(info, { lon: x1, lat: y2 })];
+  const Q11 = forecastData[getGribIndex(forecastHeader, { lon: x1, lat: y1 })];
+  const Q21 = forecastData[getGribIndex(forecastHeader, { lon: x2, lat: y1 })];
+  const Q22 = forecastData[getGribIndex(forecastHeader, { lon: x2, lat: y2 })];
+  const Q12 = forecastData[getGribIndex(forecastHeader, { lon: x1, lat: y2 })];
 
   const R1 = ((x2 - x) / (x2 - x1)) * Q11 + ((x - x1) / (x2 - x1)) * Q21;
   const R2 = ((x2 - x) / (x2 - x1)) * Q12 + ((x - x1) / (x2 - x1)) * Q22;
@@ -93,6 +124,43 @@ const calculateDataValue = (spot, info, forecastData) => {
   return P;
 };
 
+const updateSpotForecast = async (
+  spot,
+  forecastInfo,
+  forecastHeader,
+  dataValue,
+) => {
+  const forecastFound = spot.forecasts.find(
+    (spotForecast) =>
+      spotForecast.forecastInfo.toString() === forecastInfo._id.toString(),
+  );
+
+  if (!forecastFound) {
+    const forecastData = new Forecast({
+      _id: new mongoose.Types.ObjectId(),
+      forecastInfo,
+      time: forecastHeader.refTime,
+      [forecastHeader.forecastType]: {
+        [forecastHeader.forecastTime]: dataValue,
+      },
+    });
+    spot.forecasts.push(forecastData);
+
+    await forecastData.save();
+  } else {
+    forecastFound[forecastHeader.forecastType] = {
+      ...forecastFound[forecastHeader.forecastType],
+      [forecastHeader.forecastTime]: dataValue,
+    };
+    await forecastFound.save();
+  }
+
+  await spot.populate({
+    path: 'forecasts',
+    match: { forecastInfo: forecastInfo._id },
+  });
+};
+
 const populateSpots = async (filename, spots) => {
   const forecastJson = await getJson(filename, {
     scriptPath: './src/convert_grib/grib2json/src/bin/grib2json',
@@ -100,85 +168,52 @@ const populateSpots = async (filename, spots) => {
     data: true, // (default false): Return data, not just headers
   });
 
-  // get grib info from header and filename
-  const forecastInfo = getForecastInfo(forecastJson[0].header, filename);
+  // get grib info from header
+  const forecastHeader = getforecastHeader(forecastJson[0].header, filename);
+  // get forecastInfo document from db or create new one
+  const forecastInfo = await getForecastInfo(forecastHeader);
 
-  // eslint-disable-next-line no-restricted-syntax
-  spots.forEach((spot) => {
-    // check if spot is in model boarders
-    if (!inGrid(spot, forecastInfo)) {
-      return;
+  // Calculate data values for all spots in parallel
+  const dataValuePromises = spots.map((spot) => {
+    // check if spot is in model borders
+    if (inGrid(spot, forecastHeader)) {
+      return calculateDataValue(spot, forecastHeader, forecastJson[0].data);
     }
-    // calculate value
-    const dataValue = calculateDataValue(
-      spot,
-      forecastInfo,
-      forecastJson[0].data,
-    );
+    return null;
+  });
 
-    // to be refactored
-    spot.timestamp = new Date();
-    if (spot[forecastInfo.forecastType]) {
-      const tempForecastObject = { ...spot[forecastInfo.forecastType] };
-      tempForecastObject[
-        `${forecastInfo.forecastName}_${forecastInfo.forecastTime}`
-      ] = dataValue;
-      spot[forecastInfo.forecastType] = tempForecastObject;
-    } else {
-      spot[forecastInfo.forecastType] = {
-        [`${forecastInfo.forecastName}_${forecastInfo.forecastTime}`]:
-          dataValue,
-      };
+  // Wait for all dataValue promises to resolve
+  const dataValues = await Promise.all(dataValuePromises);
+
+  // Update spot forecasts with calculated data values
+  spots.forEach((spot, index) => {
+    if (dataValues[index] !== null) {
+      updateSpotForecast(spot, forecastInfo, forecastHeader, dataValues[index]);
     }
   });
 
-  let forecast = await Forecast.findOne({ name: forecastInfo.forecastName });
-  if (!forecast) {
-    forecast = new Forecast({
-      _id: new mongoose.Types.ObjectId(),
-      timestamp: forecastInfo.refTime,
-      name: forecastInfo.forecastName,
-      lo1: forecastInfo.lo1,
-      lo2: forecastInfo.lo2,
-      la1: forecastInfo.la1,
-      la2: forecastInfo.la2,
-      dy: forecastInfo.dy,
-      dx: forecastInfo.dx,
-    });
-  } else {
-    forecast.timestamp = forecastInfo.refTime;
-    forecast.lo1 = forecastInfo.lo1;
-    forecast.lo2 = forecastInfo.lo2;
-    forecast.la1 = forecastInfo.la1;
-    forecast.la2 = forecastInfo.la2;
-    forecast.dy = forecastInfo.dy;
-    forecast.dx = forecastInfo.dx;
-  }
-  await forecast.save();
+  await forecastInfo.save();
 };
 
 const convertGrib = async (filenames, path) => {
-  const spots = await Spot.find({});
+  const spots = await Spot.find({}).populate('forecasts').exec();
   if (!spots) {
     return false;
   }
   try {
-    // eslint-disable-next-line no-restricted-syntax
     for (const filename of filenames) {
-      // eslint-disable-next-line no-await-in-loop
       await populateSpots(`${path}/${filename}`, spots);
     }
-    // eslint-disable-next-line no-restricted-syntax
     for (const spot of spots) {
       await spot.save();
     }
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.log(err);
     return false;
   }
   return true;
 };
+
 module.exports = {
   convertGrib,
 };
