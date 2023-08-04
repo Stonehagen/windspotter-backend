@@ -35,31 +35,24 @@ const getforecastHeader = (
 };
 
 const getForecastInfo = async (forecastHeader) => {
-  let forecastInfo = await ForecastInfo.findOne({
-    name: forecastHeader.forecastName,
-  });
+  const { forecastName, refTime, lo1, lo2, la1, la2, dy, dx } = forecastHeader;
 
-  if (!forecastInfo) {
-    forecastInfo = new ForecastInfo({
-      _id: new mongoose.Types.ObjectId(),
-      name: forecastHeader.forecastName,
-      time: forecastHeader.refTime,
-      lo1: forecastHeader.lo1,
-      lo2: forecastHeader.lo2,
-      la1: forecastHeader.la1,
-      la2: forecastHeader.la2,
-      dy: forecastHeader.dy,
-      dx: forecastHeader.dx,
-    });
-  } else {
-    forecastInfo.time = forecastHeader.refTime;
-    forecastInfo.lo1 = forecastHeader.lo1;
-    forecastInfo.lo2 = forecastHeader.lo2;
-    forecastInfo.la1 = forecastHeader.la1;
-    forecastInfo.la2 = forecastHeader.la2;
-    forecastInfo.dy = forecastHeader.dy;
-    forecastInfo.dx = forecastHeader.dx;
-  }
+  // check if forecast already exists
+  // if not create new forecast
+  const forecastInfo = await ForecastInfo.findOneAndUpdate(
+    { name: forecastName },
+    {
+      name: forecastName,
+      time: refTime,
+      lo1,
+      lo2,
+      la1,
+      la2,
+      dy,
+      dx,
+    },
+    { upsert: true, new: true },
+  );
 
   return forecastInfo;
 };
@@ -130,11 +123,13 @@ const updateSpotForecast = async (
   forecastHeader,
   dataValue,
 ) => {
+  // check if forecast already exists
   const forecastFound = spot.forecasts.find(
     (spotForecast) =>
       spotForecast.forecastInfo.toString() === forecastInfo._id.toString(),
   );
 
+  // if not create new forecast
   if (!forecastFound) {
     const forecastData = new Forecast({
       _id: new mongoose.Types.ObjectId(),
@@ -148,13 +143,13 @@ const updateSpotForecast = async (
 
     await forecastData.save();
   } else {
+    // if forecast exists update data
     forecastFound[forecastHeader.forecastType] = {
       ...forecastFound[forecastHeader.forecastType],
       [forecastHeader.forecastTime]: dataValue,
     };
     await forecastFound.save();
   }
-
   await spot.populate({
     path: 'forecasts',
     match: { forecastInfo: forecastInfo._id },
