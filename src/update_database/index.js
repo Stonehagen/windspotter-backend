@@ -5,6 +5,7 @@ const fs = require('fs');
 const { dataValues } = require('../config');
 const { downloadFiles } = require('../ftp');
 const { convertGrib } = require('../convert_grib');
+const { ForecastInfo } = require('../models');
 
 const getFiles = (filePath) => {
   const files = fs.readdirSync(filePath);
@@ -34,13 +35,17 @@ const convertAllGrib = async (filesList) => {
   await Promise.all(convertPromises);
 };
 
-const updateDatabase = async (server, forecastDict) => {
+const updateDatabase = async (forecastName) => {
   console.log('delete old files');
   await deleteFiles(getFiles('./grib_data'));
   console.log('deleted old files');
 
+  const forecastInfo = await ForecastInfo.findOne({ name: forecastName });
+
   console.log('get files');
-  const newForecastTime = await downloadFiles(server, forecastDict);
+  const newForecastTime = await downloadFiles(
+    forecastInfo ? forecastInfo.name : undefined,
+  );
   if (!newForecastTime) {
     return false;
   }
