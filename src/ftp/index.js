@@ -81,7 +81,7 @@ const downloadFiles = async (databaseTimestamp = new Date(0)) => {
     const serverTimestamp = getServerTimestamp(fileList);
     // check if the files are older than the data in our database
     if (
-      serverTimestamp.get < databaseTimestamp ||
+      serverTimestamp < databaseTimestamp ||
       serverTimestamp - new Date() < 5 * 60 * 1000
     ) {
       console.log('database is up to date');
