@@ -44,7 +44,7 @@ const updateDatabase = async (forecastName) => {
 
   const forecastInfo = await ForecastInfo.findOne({ name: forecastName });
 
-  console.log('get files');
+  console.log('download files');
   const newForecastTime = await downloadFiles(
     forecastInfo ? forecastInfo.time : new Date(0),
   );
@@ -61,7 +61,7 @@ const updateDatabase = async (forecastName) => {
   console.log('delete files');
   await deleteFiles(getFiles('./grib_data'));
   console.log('deleted files');
-
+  console.log('Database is up to date');
   return true;
 };
 

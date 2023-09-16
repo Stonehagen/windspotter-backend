@@ -79,16 +79,10 @@ const downloadFiles = async (databaseTimestamp) => {
     // get the last update time from the requested files
     const serverTimestamp = getServerTimestamp(fileList);
     // check if the files are older than the data in our database
-
-    console.log(serverTimestamp);
-    console.log(databaseTimestamp);
-
-    if (serverTimestamp < databaseTimestamp) {
-      console.log('database is up to date');
-      client.close();
-      return null;
-    }
-    if (serverTimestamp - new Date() < 5 * 60 * 1000) {
+    if (
+      serverTimestamp < databaseTimestamp ||
+      serverTimestamp - new Date() < 5 * 60 * 1000
+    ) {
       // get one forecast time before
       const forecastTimesBefore = forecastTimes.filter(
         (time) => time < nextForecastTime,
@@ -101,7 +95,12 @@ const downloadFiles = async (databaseTimestamp) => {
       // get the last update time from the requested files
       const nextServerTimestamp = getServerTimestamp(nexForecasstFileList);
       // check if the files are older than the data in our database
-      if (nextServerTimestamp < databaseTimestamp) {
+      if (
+        nextServerTimestamp < databaseTimestamp ||
+        (databaseTimestamp.getUTCHours() == nextForecastTimeBefore && 
+        databaseTimestamp.getUTCDate() == nextServerTimestamp.getUTCDate()
+        )
+      ) {
         console.log('database is up to date');
         client.close();
         return null;
@@ -124,7 +123,6 @@ const downloadFiles = async (databaseTimestamp) => {
         await decompressFile(file, './grib_data/');
       }
     }
-    console.log('download complete');
     client.close();
     return nextForecastTime;
   } catch (err) {
