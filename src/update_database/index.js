@@ -4,7 +4,7 @@
 const fs = require('fs');
 const { dataValues } = require('../config');
 const { downloadFiles } = require('../ftp');
-const { convertGrib } = require('../convert_grib');
+const { convertGrib, addEmptyForecastToSpots } = require('../convert_grib');
 const { ForecastInfo } = require('../models');
 
 const getFiles = (filePath) => {
@@ -29,6 +29,8 @@ const deleteFiles = async (files) => {
 };
 
 const convertAllGrib = async (filesList) => {
+
+  await addEmptyForecastToSpots(`./grib_data/${filesList[0][0]}`)
   const convertPromises = filesList.map((files) =>
     convertGrib(files, './grib_data'),
   );

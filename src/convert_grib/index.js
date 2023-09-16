@@ -153,7 +153,7 @@ const updateSpotForecast = async (
   }
   await spot.populate({
     path: 'forecasts',
-    match: { forecastInfo: forecastInfo._id },
+    match: { forecastInfo: forecastInfo._id.toString() },
   });
 };
 
@@ -191,6 +191,50 @@ const populateSpots = async (filename, spots) => {
   await forecastInfo.save();
 };
 
+const addEmptyForecastToSpots = async (filename) => {
+  const forecastJson = await getJson(filename, {
+    scriptPath: './src/convert_grib/grib2json/src/bin/grib2json',
+    names: true, // (default false): Return descriptive names too
+    data: true, // (default false): Return data, not just headers
+  });
+  // get grib info from header
+  const forecastHeader = getforecastHeader(forecastJson[0].header, filename);
+  // get forecastInfo document from db or create new one
+  const forecastInfo = await getForecastInfo(forecastHeader);
+  const spots = await Spot.find({}).populate('forecasts').exec();
+  if (!spots) {
+    return false;
+  }
+  try {
+    for (const spot of spots) {
+      // check if forecast already exists
+      const forecastFound = spot.forecasts.find(
+        (spotForecast) =>
+          spotForecast.forecastInfo.toString() === forecastInfo._id.toString(),
+      );
+
+      // if not create new forecast
+      if (!forecastFound) {
+        const forecastData = new Forecast({
+          _id: new mongoose.Types.ObjectId(),
+          forecastInfo,
+          time: forecastInfo.time,
+        });
+        spot.forecasts.push(forecastData);
+
+        await forecastData.save();
+      }
+    }
+    for (const spot of spots) {
+      await spot.save();
+    }
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+  return true;
+};
+
 const convertGrib = async (filenames, path) => {
   const spots = await Spot.find({}).populate('forecasts').exec();
   if (!spots) {
@@ -212,4 +256,5 @@ const convertGrib = async (filenames, path) => {
 
 module.exports = {
   convertGrib,
+  addEmptyForecastToSpots,
 };
