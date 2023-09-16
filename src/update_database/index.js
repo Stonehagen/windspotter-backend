@@ -46,7 +46,7 @@ const updateDatabase = async (forecastName) => {
 
   console.log('get files');
   const newForecastTime = await downloadFiles(
-    forecastInfo ? forecastInfo.time : undefined,
+    forecastInfo ? forecastInfo.time : new Date(0),
   );
   if (!newForecastTime) {
     return false;

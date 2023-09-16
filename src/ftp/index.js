@@ -60,7 +60,7 @@ const getServerTimestamp = (fileList) => {
   return new Date(Math.max(...fileTimestamps));
 };
 
-const downloadFiles = async (databaseTimestamp = new Date(0)) => {
+const downloadFiles = async (databaseTimestamp) => {
   const server = 'opendata.dwd.de';
   const dict = 'weather/nwp/icon-d2/grib';
   const client = new ftp.Client();
@@ -75,18 +75,40 @@ const downloadFiles = async (databaseTimestamp = new Date(0)) => {
     const forecastTimes = dirList.map((folderInfo) => folderInfo.name);
     // get the latest forecast folder name
     const nextForecastTime = getNextForecastTime(forecastTimes);
-    await client.cd(`${dict}/${nextForecastTime}`);
-    const fileList = await client.list();
+    const fileList = await client.list(`${dict}/${nextForecastTime}`);
     // get the last update time from the requested files
     const serverTimestamp = getServerTimestamp(fileList);
     // check if the files are older than the data in our database
-    if (
-      serverTimestamp < databaseTimestamp ||
-      serverTimestamp - new Date() < 5 * 60 * 1000
-    ) {
+
+    console.log(serverTimestamp);
+    console.log(databaseTimestamp);
+
+    if (serverTimestamp < databaseTimestamp) {
       console.log('database is up to date');
       client.close();
       return null;
+    }
+    if (serverTimestamp - new Date() < 5 * 60 * 1000) {
+      // get one forecast time before
+      const forecastTimesBefore = forecastTimes.filter(
+        (time) => time < nextForecastTime,
+      );
+      const nextForecastTimeBefore = getNextForecastTime(forecastTimesBefore);
+
+      const nexForecasstFileList = await client.list(
+        `${dict}/${nextForecastTimeBefore}`,
+      );
+      // get the last update time from the requested files
+      const nextServerTimestamp = getServerTimestamp(nexForecasstFileList);
+      // check if the files are older than the data in our database
+      if (nextServerTimestamp < databaseTimestamp) {
+        console.log('database is up to date');
+        client.close();
+        return null;
+      }
+      await client.cd(`${dict}/${nextForecastTimeBefore}`);
+    } else {
+      await client.cd(`${dict}/${nextForecastTime}`);
     }
 
     // create a list of the files und download them
