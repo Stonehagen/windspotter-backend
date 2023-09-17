@@ -17,9 +17,9 @@ const getforecastHeader = (
   { lo1, lo2, la1, la2, dx, dy, refTime, forecastTime },
   filename,
 ) => {
-  const regex = /(?<=_)[0-9]+_[0-9]+_[0-9]+_[A-Za-z]+(?=.grib)/;
+  const regex = /(?<=_[0-9]+_[0-9]+_[a-zA-Z0-9]+_).+(?=\.grib)/;
   const regex2 = /([^\/]+$)/;
-  const forecastType = filename.match(regex)[0].split('_')[3];
+  const forecastType = filename.match(regex)[0];
   const forecastName = filename.match(regex2)[0].split('_')[0];
   return {
     forecastName,

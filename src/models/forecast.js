@@ -5,9 +5,9 @@ const { Schema } = mongoose;
 const ForecastSchema = new Schema({
   forecastInfo: { type: Schema.Types.ObjectId, ref: 'Forecast' },
   time: { type: Date, required: true },
-  t: { type: Object },
-  v: { type: Object },
-  u: { type: Object },
+  t_2m: { type: Object },
+  v_10m: { type: Object },
+  u_10m: { type: Object },
 });
 
 module.exports = mongoose.model('Forecast', ForecastSchema);

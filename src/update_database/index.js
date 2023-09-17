@@ -14,7 +14,7 @@ const getFiles = (filePath) => {
 };
 
 const sortFiles = (files, value) => {
-  const regex = /(?<=_[0-9]+_[0-9]+_[0-9]+_)[A-Za-z]+(?=.grib)/;
+  const regex = /(?<=_[0-9]+_[0-9]+_[a-zA-Z0-9]+_).+(?=\.grib)/;
   return files.filter((file) => file.match(regex)[0] === value);
 };
 
