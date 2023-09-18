@@ -145,6 +145,7 @@ const updateSpotForecast = async (
     await forecastData.save();
   } else {
     // if forecast exists update data
+    forecastFound.time = forecastHeader.refTime;
     forecastFound[forecastHeader.forecastType] = {
       ...forecastFound[forecastHeader.forecastType],
       [forecastHeader.forecastTime]: dataValue,
