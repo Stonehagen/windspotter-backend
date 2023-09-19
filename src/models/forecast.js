@@ -8,6 +8,9 @@ const ForecastSchema = new Schema({
   t_2m: { type: Object },
   v_10m: { type: Object },
   u_10m: { type: Object },
+  vmax_10m: { type: Object },
+  clct_mod: { type: Object },
+  prr_gsp: { type: Object },
 });
 
 module.exports = mongoose.model('Forecast', ForecastSchema);
