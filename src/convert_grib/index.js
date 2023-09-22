@@ -130,6 +130,10 @@ const updateSpotForecast = async (
       spotForecast.forecastInfo.toString() === forecastInfo._id.toString(),
   );
 
+  const forecastTime =
+    new Date(new Date(forecastHeader.refTime).getTime() +
+    forecastHeader.forecastTime * 60000);
+
   // if not create new forecast
   if (!forecastFound) {
     const forecastData = new Forecast({
@@ -137,7 +141,7 @@ const updateSpotForecast = async (
       forecastInfo,
       time: forecastHeader.refTime,
       [forecastHeader.forecastType]: {
-        [forecastHeader.forecastTime]: dataValue,
+        [forecastTime]: dataValue,
       },
     });
     spot.forecasts.push(forecastData);
@@ -148,7 +152,7 @@ const updateSpotForecast = async (
     forecastFound.time = forecastHeader.refTime;
     forecastFound[forecastHeader.forecastType] = {
       ...forecastFound[forecastHeader.forecastType],
-      [forecastHeader.forecastTime]: dataValue,
+      [forecastTime]: dataValue,
     };
     await forecastFound.save();
   }
