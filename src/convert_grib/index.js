@@ -10,17 +10,17 @@ const mongoose = require('mongoose');
 const util = require('util');
 const grib2json = require('grib2json').default;
 const { Spot, Forecast, ForecastInfo } = require('../models');
+const config = require('../config');
 
 const getJson = util.promisify(grib2json);
 
 const getforecastHeader = (
   { lo1, lo2, la1, la2, dx, dy, refTime, forecastTime },
   filename,
+  forecastName,
 ) => {
-  const regex = /(?<=_[0-9]+_[0-9]+_[a-zA-Z0-9]+_).+(?=\.grib)/;
-  const regex2 = /([^\/]+$)/;
+  const regex = config[forecastName].regexNameValue;
   const forecastType = filename.match(regex)[0];
-  const forecastName = filename.match(regex2)[0].split('_')[0];
   return {
     forecastName,
     forecastType,
@@ -130,9 +130,10 @@ const updateSpotForecast = async (
       spotForecast.forecastInfo.toString() === forecastInfo._id.toString(),
   );
 
-  const forecastTime =
-    new Date(new Date(forecastHeader.refTime).getTime() +
-    forecastHeader.forecastTime * 60000);
+  const forecastTime = new Date(
+    new Date(forecastHeader.refTime).getTime() +
+      forecastHeader.forecastTime * 60000,
+  );
 
   // if not create new forecast
   if (!forecastFound) {
@@ -162,7 +163,7 @@ const updateSpotForecast = async (
   });
 };
 
-const populateSpots = async (filename, spots) => {
+const populateSpots = async (filename, spots, forecastName) => {
   const forecastJson = await getJson(filename, {
     scriptPath: './src/convert_grib/grib2json/src/bin/grib2json',
     names: true, // (default false): Return descriptive names too
@@ -170,7 +171,11 @@ const populateSpots = async (filename, spots) => {
   });
 
   // get grib info from header
-  const forecastHeader = getforecastHeader(forecastJson[0].header, filename);
+  const forecastHeader = getforecastHeader(
+    forecastJson[0].header,
+    filename,
+    forecastName,
+  );
   // get forecastInfo document from db or create new one
   const forecastInfo = await getForecastInfo(forecastHeader);
 
@@ -196,14 +201,18 @@ const populateSpots = async (filename, spots) => {
   await forecastInfo.save();
 };
 
-const addEmptyForecastToSpots = async (filename) => {
+const addEmptyForecastToSpots = async (filename, forecastName) => {
   const forecastJson = await getJson(filename, {
     scriptPath: './src/convert_grib/grib2json/src/bin/grib2json',
     names: true, // (default false): Return descriptive names too
     data: true, // (default false): Return data, not just headers
   });
   // get grib info from header
-  const forecastHeader = getforecastHeader(forecastJson[0].header, filename);
+  const forecastHeader = getforecastHeader(
+    forecastJson[0].header,
+    filename,
+    forecastName,
+  );
   // get forecastInfo document from db or create new one
   const forecastInfo = await getForecastInfo(forecastHeader);
   const spots = await Spot.find({}).populate('forecasts').exec();
@@ -240,14 +249,14 @@ const addEmptyForecastToSpots = async (filename) => {
   return true;
 };
 
-const convertGrib = async (filenames, path) => {
+const convertGrib = async (filenames, path, forecastName) => {
   const spots = await Spot.find({}).populate('forecasts').exec();
   if (!spots) {
     return false;
   }
   try {
     for (const filename of filenames) {
-      await populateSpots(`${path}/${filename}`, spots);
+      await populateSpots(`${path}/${filename}`, spots, forecastName);
     }
     for (const spot of spots) {
       await spot.save();

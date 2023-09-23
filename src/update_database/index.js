@@ -28,10 +28,10 @@ const deleteFiles = async (files) => {
   await Promise.all(unlinkPromises);
 };
 
-const convertAllGrib = async (filesList) => {
-  await addEmptyForecastToSpots(`./grib_data/${filesList[0][0]}`);
+const convertAllGrib = async (filesList, forecastName) => {
+  await addEmptyForecastToSpots(`./grib_data/${filesList[0][0]}`, forecastName);
   const convertPromises = filesList.map((files) =>
-    convertGrib(files, './grib_data'),
+    convertGrib(files, './grib_data', forecastName),
   );
   await Promise.all(convertPromises);
 };
@@ -59,7 +59,7 @@ const updateDatabase = async (forecastName) => {
   const sortedFiles = dataValues.map((value) =>
     sortFiles(files, value, forecastName),
   );
-  await convertAllGrib(sortedFiles);
+  await convertAllGrib(sortedFiles, forecastName);
   console.log('updated Database');
 
   console.log('delete files');
