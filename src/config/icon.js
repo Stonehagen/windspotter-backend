@@ -4,6 +4,8 @@ const icon = {
   fCModel: 'regular-lat-lon_',
   fCHeight: '_2d_',
   serverDataTimeDelay: 5 * 60 * 1000,
+  server: 'opendata.dwd.de',
+  dict: 'weather/nwp/icon-d2/grib',
 }
 
 module.exports = {
