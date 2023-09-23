@@ -6,6 +6,7 @@ const icon = {
   serverDataTimeDelay: 5 * 60 * 1000,
   server: 'opendata.dwd.de',
   dict: 'weather/nwp/icon-d2/grib',
+  regexNameValue: /(?<=_[0-9]+_[0-9]+_[a-zA-Z0-9]+_).+(?=\.grib)/,
 }
 
 module.exports = {
