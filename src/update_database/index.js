@@ -2,7 +2,7 @@
 /* eslint-disable implicit-arrow-linebreak */
 /* eslint-disable no-console */
 const fs = require('fs');
-const { dataValues } = require('../config');
+const config = require('../config');
 const { downloadFiles } = require('../ftp');
 const { convertGrib, addEmptyForecastToSpots } = require('../convert_grib');
 const { ForecastInfo } = require('../models');
@@ -14,7 +14,7 @@ const getFiles = (filePath) => {
 };
 
 const sortFiles = (files, value) => {
-  const regex = /(?<=_[0-9]+_[0-9]+_[a-zA-Z0-9]+_).+(?=\.grib)/;
+  const regex = config[forecastName].regexNameValue;
   return files.filter((file) => file.match(regex)[0] === value);
 };
 
@@ -29,8 +29,7 @@ const deleteFiles = async (files) => {
 };
 
 const convertAllGrib = async (filesList) => {
-
-  await addEmptyForecastToSpots(`./grib_data/${filesList[0][0]}`)
+  await addEmptyForecastToSpots(`./grib_data/${filesList[0][0]}`);
   const convertPromises = filesList.map((files) =>
     convertGrib(files, './grib_data'),
   );
@@ -38,6 +37,8 @@ const convertAllGrib = async (filesList) => {
 };
 
 const updateDatabase = async (forecastName) => {
+  dataValues = config[forecastName].dataValues;
+
   console.log('delete old files');
   await deleteFiles(getFiles('./grib_data'));
   console.log('deleted old files');
@@ -47,6 +48,7 @@ const updateDatabase = async (forecastName) => {
   console.log('download files');
   const newForecastTime = await downloadFiles(
     forecastInfo ? forecastInfo.time : new Date(0),
+    config[forecastName],
   );
   if (!newForecastTime) {
     return false;
@@ -54,7 +56,9 @@ const updateDatabase = async (forecastName) => {
   console.log('download complete');
   console.log('update Database');
   const files = getFiles('./grib_data');
-  const sortedFiles = dataValues.map((value) => sortFiles(files, value));
+  const sortedFiles = dataValues.map((value) =>
+    sortFiles(files, value, forecastName),
+  );
   await convertAllGrib(sortedFiles);
   console.log('updated Database');
 
