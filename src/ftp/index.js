@@ -6,7 +6,7 @@ const ftp = require('basic-ftp');
 const decompress = require('decompress');
 const decompressBzip2 = require('decompress-bzip2');
 
-const { dataValues, fCModel, fCHeight } = require('../config');
+const config = require('../config');
 
 const getNextForecastTime = (forecastTimes) => {
   // convert Strings into Numbers
@@ -60,9 +60,13 @@ const getServerTimestamp = (fileList) => {
   return new Date(Math.max(...fileTimestamps));
 };
 
-const downloadFiles = async (databaseTimestamp) => {
-  const server = 'opendata.dwd.de';
-  const dict = 'weather/nwp/icon-d2/grib';
+const downloadFiles = async (databaseTimestamp, forecastName) => {
+  const server = config[forecastName].server;
+  const dict = config[forecastName].dict;
+  const dataValues = config[forecastName].dataValues;
+  const fCModel = config[forecastName].fCModel;
+  const fCHeight = config[forecastName].fCHeight;
+  
   const client = new ftp.Client();
 
   try {
