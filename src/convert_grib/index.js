@@ -17,12 +17,12 @@ const getJson = util.promisify(grib2json);
 const getforecastHeader = (
   { lo1, lo2, la1, la2, dx, dy, refTime, forecastTime },
   filename,
-  forecastName,
+  forecastConfigName,
 ) => {
-  const regex = config[forecastName].regexNameValue;
+  const regex = config[forecastConfigName].regexNameValue;
   const forecastType = filename.match(regex)[0];
   return {
-    forecastName,
+    forecastName: config[forecastConfigName].forecastName,
     forecastType,
     refTime,
     forecastTime,
@@ -163,7 +163,7 @@ const updateSpotForecast = async (
   });
 };
 
-const populateSpots = async (filename, spots, forecastName) => {
+const populateSpots = async (filename, spots, forecastConfigName) => {
   const forecastJson = await getJson(filename, {
     scriptPath: './src/convert_grib/grib2json/src/bin/grib2json',
     names: true, // (default false): Return descriptive names too
@@ -174,7 +174,7 @@ const populateSpots = async (filename, spots, forecastName) => {
   const forecastHeader = getforecastHeader(
     forecastJson[0].header,
     filename,
-    forecastName,
+    forecastConfigName,
   );
   // get forecastInfo document from db or create new one
   const forecastInfo = await getForecastInfo(forecastHeader);
@@ -201,7 +201,7 @@ const populateSpots = async (filename, spots, forecastName) => {
   await forecastInfo.save();
 };
 
-const addEmptyForecastToSpots = async (filename, forecastName) => {
+const addEmptyForecastToSpots = async (filename, forecastConfigName) => {
   const forecastJson = await getJson(filename, {
     scriptPath: './src/convert_grib/grib2json/src/bin/grib2json',
     names: true, // (default false): Return descriptive names too
@@ -211,7 +211,7 @@ const addEmptyForecastToSpots = async (filename, forecastName) => {
   const forecastHeader = getforecastHeader(
     forecastJson[0].header,
     filename,
-    forecastName,
+    forecastConfigName,
   );
   // get forecastInfo document from db or create new one
   const forecastInfo = await getForecastInfo(forecastHeader);
@@ -249,14 +249,14 @@ const addEmptyForecastToSpots = async (filename, forecastName) => {
   return true;
 };
 
-const convertGrib = async (filenames, path, forecastName) => {
+const convertGrib = async (filenames, path, forecastConfigName) => {
   const spots = await Spot.find({}).populate('forecasts').exec();
   if (!spots) {
     return false;
   }
   try {
     for (const filename of filenames) {
-      await populateSpots(`${path}/${filename}`, spots, forecastName);
+      await populateSpots(`${path}/${filename}`, spots, forecastConfigName);
     }
     for (const spot of spots) {
       await spot.save();

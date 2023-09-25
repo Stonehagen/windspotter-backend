@@ -1,5 +1,5 @@
-const icon = {
-  forecastName: 'icon-eu',
+const iconD2 = {
+  forecastName: 'icon-d2',
   dataValues: ['t_2m', 'v_10m', 'u_10m', 'vmax_10m', 'clct_mod', 'prr_gsp'],
   fCModel: 'regular-lat-lon_',
   fCHeight: '_2d_',
@@ -10,5 +10,5 @@ const icon = {
 }
 
 module.exports = {
-  icon
+  iconD2
 };

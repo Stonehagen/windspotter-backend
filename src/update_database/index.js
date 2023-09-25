@@ -13,9 +13,11 @@ const getFiles = (filePath) => {
   return files.filter((file) => !file.startsWith('.'));
 };
 
-const sortFiles = (files, value) => {
-  const regex = config[forecastName].regexNameValue;
-  return files.filter((file) => file.match(regex)[0] === value);
+const sortFiles = (files, value, forecastConfigName) => {
+  const regex = config[forecastConfigName].regexNameValue;
+  return files.filter(
+    (file) => file.match(regex)[0].toLowerCase() === value.toLowerCase(),
+  );
 };
 
 const deleteFiles = async (files) => {
@@ -28,16 +30,21 @@ const deleteFiles = async (files) => {
   await Promise.all(unlinkPromises);
 };
 
-const convertAllGrib = async (filesList, forecastName) => {
-  await addEmptyForecastToSpots(`./grib_data/${filesList[0][0]}`, forecastName);
+const convertAllGrib = async (filesList, forecastConfigName) => {
+  const forecastName = config[forecastConfigName].forecastName;
+  await addEmptyForecastToSpots(
+    `./grib_data/${filesList[0][0]}`,
+    forecastConfigName,
+  );
   const convertPromises = filesList.map((files) =>
-    convertGrib(files, './grib_data', forecastName),
+    convertGrib(files, './grib_data', forecastConfigName),
   );
   await Promise.all(convertPromises);
 };
 
-const updateDatabase = async (forecastName) => {
-  dataValues = config[forecastName].dataValues;
+const updateDatabase = async (forecastConfigName) => {
+  forecastName = config[forecastConfigName].forecastName;
+  dataValues = config[forecastConfigName].dataValues;
 
   console.log('delete old files');
   await deleteFiles(getFiles('./grib_data'));
@@ -48,7 +55,7 @@ const updateDatabase = async (forecastName) => {
   console.log('download files');
   const newForecastTime = await downloadFiles(
     forecastInfo ? forecastInfo.time : new Date(0),
-    config[forecastName],
+    forecastConfigName,
   );
   if (!newForecastTime) {
     return false;
@@ -57,9 +64,9 @@ const updateDatabase = async (forecastName) => {
   console.log('update Database');
   const files = getFiles('./grib_data');
   const sortedFiles = dataValues.map((value) =>
-    sortFiles(files, value, forecastName),
+    sortFiles(files, value, forecastConfigName),
   );
-  await convertAllGrib(sortedFiles, forecastName);
+  await convertAllGrib(sortedFiles, forecastConfigName);
   console.log('updated Database');
 
   console.log('delete files');

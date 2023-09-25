@@ -13,7 +13,7 @@ db.on('error', console.error.bind(console, 'mongo connection error'));
 // eslint-disable-next-line no-unused-vars
 const job = new CronJob(
   '*/30 * * * *',
-  updateDatabase('icon-d2'),
+  updateDatabase('iconD2'),
   null,
   true,
   'Europe/Berlin',

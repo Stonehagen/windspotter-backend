@@ -60,15 +60,13 @@ const getServerTimestamp = (fileList) => {
   return new Date(Math.max(...fileTimestamps));
 };
 
-const downloadFiles = async (databaseTimestamp, forecastName) => {
-  const server = config[forecastName].server;
-  const dict = config[forecastName].dict;
-  const dataValues = config[forecastName].dataValues;
-  const fCModel = config[forecastName].fCModel;
-  const fCHeight = config[forecastName].fCHeight;
-  
+const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
+  const server = config[forecastConfigName].server;
+  const dict = config[forecastConfigName].dict;
+  const dataValues = config[forecastConfigName].dataValues;
+  const fCModel = config[forecastConfigName].fCModel;
+  const fCHeight = config[forecastConfigName].fCHeight;
   const client = new ftp.Client();
-
   try {
     await client.access({
       host: server,
@@ -101,9 +99,8 @@ const downloadFiles = async (databaseTimestamp, forecastName) => {
       // check if the files are older than the data in our database
       if (
         nextServerTimestamp < databaseTimestamp ||
-        (databaseTimestamp.getUTCHours() == nextForecastTimeBefore && 
-        databaseTimestamp.getUTCDate() == nextServerTimestamp.getUTCDate()
-        )
+        (databaseTimestamp.getUTCHours() == nextForecastTimeBefore &&
+          databaseTimestamp.getUTCDate() == nextServerTimestamp.getUTCDate())
       ) {
         console.log('database is up to date');
         client.close();
@@ -113,7 +110,6 @@ const downloadFiles = async (databaseTimestamp, forecastName) => {
     } else {
       await client.cd(`${dict}/${nextForecastTime}`);
     }
-
     // create a list of the files und download them
     for (const value of dataValues) {
       let clientList = await client.list(`./${value}`);

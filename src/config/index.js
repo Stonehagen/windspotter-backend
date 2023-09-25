@@ -1,7 +1,7 @@
-const icon = require('./icon');
-const cwam = require('./cwam');
+const { iconD2 } = require('./iconD2');
+const { cwam } = require('./cwam');
 
 module.exports = {
-  icon,
-  cwam
+  iconD2,
+  cwam,
 };
