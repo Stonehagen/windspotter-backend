@@ -10,11 +10,4 @@ const db = mongoose.connection;
 // eslint-disable-next-line no-console
 db.on('error', console.error.bind(console, 'mongo connection error'));
 
-// eslint-disable-next-line no-unused-vars
-const job = new CronJob(
-  '*/30 * * * *',
-  updateDatabase('iconD2'),
-  null,
-  true,
-  'Europe/Berlin',
-);
+await updateDatabase('iconD2');
