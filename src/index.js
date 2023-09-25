@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { CronJob } = require('cron');
 require('dotenv/config');
 const { updateDatabase } = require('./update_database');
 

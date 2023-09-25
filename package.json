@@ -15,7 +15,6 @@
   "license": "ISC",
   "dependencies": {
     "basic-ftp": "^5.0.3",
-    "cron": "^2.3.1",
     "decompress": "^4.2.1",
     "decompress-bzip2": "^4.0.0",
     "dotenv": "^16.3.1",
