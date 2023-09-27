@@ -44,7 +44,7 @@ const decompressFile = async (file, gribPath) => {
   await decompress(`${gribPath}/${file}`, './', {
     plugins: [
       decompressBzip2({
-        path: `${gribPath}/${file.match(regex)[0]}`,
+        path: `./grib_data/${file.match(regex)[0]}`,
       }),
     ],
   });
