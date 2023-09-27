@@ -41,7 +41,7 @@ const getFileTimestamps = (files) => {
 
 const decompressFile = async (file, gribPath) => {
   const regex = /.*(?=.bz2)/;
-  await decompress(`${gribPath}/${file}`, './', {
+  await decompress(`${gribPath}/${file}`, gribPath, {
     plugins: [
       decompressBzip2({
         path: `${gribPath}/${file.match(regex)[0]}`,
