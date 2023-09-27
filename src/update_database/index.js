@@ -10,6 +10,7 @@ const { ForecastInfo } = require('../models');
 const getFiles = (filePath) => {
   const files = fs.readdirSync(filePath);
   // remove hidden files from fileList
+  console.log('here');
   return files.filter((file) => !file.startsWith('.'));
 };
 

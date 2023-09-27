@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
-const { updateDatabase } = require('./update_database');
+dotenv.config({ path: __dirname + '/../.env' });
+const { updateDatabase } = require('./update_database');  
 
 // eslint-disable-next-line operator-linebreak
 const mongoDB = process.env.MONGODB_URI;
