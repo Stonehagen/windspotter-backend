@@ -60,7 +60,7 @@ const getServerTimestamp = (fileList) => {
   return new Date(Math.max(...fileTimestamps));
 };
 
-const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
+const downloadFiles = async (databaseTimestamp, forecastConfigName, home) => {
   const server = config[forecastConfigName].server;
   const dict = config[forecastConfigName].dict;
   const dataValues = config[forecastConfigName].dataValues;
@@ -119,8 +119,8 @@ const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
         .filter((name) => name.includes(fCModel) && name.includes(fCHeight));
       // download file per file
       for (const file of clientList) {
-        await client.downloadTo(`./grib_data/${file}`, `./${value}/${file}`);
-        await decompressFile(file, './grib_data/');
+        await client.downloadTo(`${home}/${file}`, `./${value}/${file}`);
+        await decompressFile(file, `${home}/`);
       }
     }
     client.close();
