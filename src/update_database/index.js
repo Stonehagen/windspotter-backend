@@ -6,8 +6,7 @@ const config = require('../config');
 const { downloadFiles } = require('../ftp');
 const { convertGrib, addEmptyForecastToSpots } = require('../convert_grib');
 const { ForecastInfo } = require('../models');
-let home = process.env['APP_PATH'] ? process.env['APP_PATH'] : './grib_data';
-console.log(home);
+let gribPath = process.env['GRIB_DATA_PATH'] ? process.env['GRIB_DATA_PATH'] : './grib_data';
 
 const getFiles = (filePath) => {
   const files = fs.readdirSync(filePath);
@@ -27,7 +26,7 @@ const deleteFiles = async (files) => {
     return;
   }
   const unlinkPromises = files.map((file) =>
-    fs.promises.unlink(`${home}/${file}`),
+    fs.promises.unlink(`${gribPath}/${file}`),
   );
   await Promise.all(unlinkPromises);
 };
@@ -35,11 +34,11 @@ const deleteFiles = async (files) => {
 const convertAllGrib = async (filesList, forecastConfigName) => {
   const forecastName = config[forecastConfigName].forecastName;
   await addEmptyForecastToSpots(
-    `${home}/${filesList[0][0]}`,
+    `${gribPath}/${filesList[0][0]}`,
     forecastConfigName,
   );
   const convertPromises = filesList.map((files) =>
-    convertGrib(files, home, forecastConfigName),
+    convertGrib(files, gribPath, forecastConfigName),
   );
   await Promise.all(convertPromises);
 };
@@ -49,7 +48,7 @@ const updateDatabase = async (forecastConfigName) => {
   dataValues = config[forecastConfigName].dataValues;
 
   console.log('delete old files');
-  await deleteFiles(getFiles(home));
+  await deleteFiles(getFiles(gribPath));
   console.log('deleted old files');
 
   const forecastInfo = await ForecastInfo.findOne({ name: forecastName });
@@ -58,14 +57,14 @@ const updateDatabase = async (forecastConfigName) => {
   const newForecastTime = await downloadFiles(
     forecastInfo ? forecastInfo.time : new Date(0),
     forecastConfigName,
-    home,
+    gribPath,
   );
   if (!newForecastTime) {
     return false;
   }
   console.log('download complete');
   console.log('update Database');
-  const files = getFiles(home);
+  const files = getFiles(gribPath);
   const sortedFiles = dataValues.map((value) =>
     sortFiles(files, value, forecastConfigName),
   );
@@ -73,7 +72,7 @@ const updateDatabase = async (forecastConfigName) => {
   console.log('updated Database');
 
   console.log('delete files');
-  await deleteFiles(getFiles(home));
+  await deleteFiles(getFiles(gribPath));
   console.log('deleted files');
   console.log('Database is up to date');
   return true;
