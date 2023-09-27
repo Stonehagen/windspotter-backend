@@ -39,17 +39,17 @@ const getFileTimestamps = (files) => {
   });
 };
 
-const decompressFile = async (file, path) => {
+const decompressFile = async (file, gribPath) => {
   const regex = /.*(?=.bz2)/;
-  await decompress(`${path}/${file}`, './', {
+  await decompress(`${gribPath}/${file}`, './', {
     plugins: [
       decompressBzip2({
-        path: `${path}/${file.match(regex)[0]}`,
+        path: `${gribPath}/${file.match(regex)[0]}`,
       }),
     ],
   });
-  await fs.unlinkSync(`${path}/${file}`);
-  fs.chmodSync(`${path}/${file.match(regex)[0]}`, 0o755);
+  await fs.unlinkSync(`${gribPath}/${file}`);
+  fs.chmodSync(`${gribPath}/${file.match(regex)[0]}`, 0o755);
 };
 
 const getServerTimestamp = (fileList) => {
@@ -119,6 +119,7 @@ const downloadFiles = async (databaseTimestamp, forecastConfigName, gribPath) =>
         .filter((name) => name.includes(fCModel) && name.includes(fCHeight));
       // download file per file
       for (const file of clientList) {
+        
         await client.downloadTo(`${gribPath}/${file}`, `./${value}/${file}`);
         await decompressFile(file, gribPath);
       }
