@@ -10,4 +10,5 @@ const db = mongoose.connection;
 // eslint-disable-next-line no-console
 db.on('error', console.error.bind(console, 'mongo connection error'));
 
-updateDatabase('iconD2').then((res) => db.close());
+const wgrib2 = true;
+updateDatabase('cwam').then((res) => db.close());

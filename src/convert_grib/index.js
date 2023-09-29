@@ -249,7 +249,7 @@ const addEmptyForecastToSpots = async (filename, forecastConfigName) => {
   return true;
 };
 
-const convertGrib = async (filenames, path, forecastConfigName) => {
+const convertGribToJson = async (filenames, path, forecastConfigName) => {
   const spots = await Spot.find({}).populate('forecasts').exec();
   if (!spots) {
     return false;
@@ -269,6 +269,6 @@ const convertGrib = async (filenames, path, forecastConfigName) => {
 };
 
 module.exports = {
-  convertGrib,
+  convertGribToJson,
   addEmptyForecastToSpots,
 };
