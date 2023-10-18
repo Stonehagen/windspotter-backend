@@ -4,9 +4,17 @@
 const fs = require('fs');
 const config = require('../config');
 const { downloadFiles } = require('../ftp');
-const { convertGribToJson, addEmptyForecastToSpots } = require('../convert_grib');
+const {
+  convertGribToJson,
+  addEmptyForecastToSpots,
+} = require('../convert_grib/grib2json');
+const { convertWGrib2ToNetcdf } = require('../convert_grib/wgrib2');
+const {
+  convertNetCDFToJson,
+  addEmptyForecastToSpotsNetCDF,
+} = require('../convert_grib/netCdf2json');
 const { ForecastInfo } = require('../models');
-let gribPath = process.env['GRIB_DATA_PATH'] ? process.env['GRIB_DATA_PATH'] : './grib_data';
+const { getForecastInfo } = require('../methods/forecastInfos');
 
 const getFiles = (filePath) => {
   const files = fs.readdirSync(filePath);
@@ -26,18 +34,38 @@ const deleteFiles = async (files) => {
     return;
   }
   const unlinkPromises = files.map((file) =>
-    fs.promises.unlink(`${gribPath}/${file}`),
+    fs.promises.unlink(`./grib_data/${file}`),
   );
   await Promise.all(unlinkPromises);
 };
 
-const convertAllGribToJSON = async (filesList, forecastConfigName) => {
-  await addEmptyForecastToSpots(
-    `${gribPath}/${filesList[0][0]}`,
+const convertAllWGrib2 = async (filesList, forecastConfigName) => {
+  const convertPromises = filesList.map((files) =>
+    convertWGrib2ToNetcdf(files, forecastConfigName),
+  );
+  await Promise.all(convertPromises);
+};
+
+const convertAllNetCDFToJSON = async (filesList, forecastConfigName) => {
+  const forecastInfo = await getForecastInfo(
+    filesList[0][0],
     forecastConfigName,
   );
+  await addEmptyForecastToSpotsNetCDF(forecastInfo);
   const convertPromises = filesList.map((files) =>
-    convertGribToJson(files, gribPath, forecastConfigName),
+    convertNetCDFToJson(files, forecastInfo, forecastConfigName),
+  );
+  await Promise.all(convertPromises);
+};
+
+const convertAllGribToJSON = async (filesList, forecastConfigName) => {
+  const forecastInfo = await getForecastInfo(
+    filesList[0][0],
+    forecastConfigName,
+  );
+  await addEmptyForecastToSpots(forecastInfo);
+  const convertPromises = filesList.map((files) =>
+    convertGribToJson(files, forecastInfo, forecastConfigName),
   );
   await Promise.all(convertPromises);
 };
@@ -47,7 +75,7 @@ const updateDatabase = async (forecastConfigName, wgrib2) => {
   dataValues = config[forecastConfigName].dataValues;
 
   console.log('delete old files');
-  await deleteFiles(getFiles(gribPath));
+  await deleteFiles(getFiles('./grib_data'));
   console.log('deleted old files');
 
   const forecastInfo = await ForecastInfo.findOne({ name: forecastName });
@@ -56,20 +84,24 @@ const updateDatabase = async (forecastConfigName, wgrib2) => {
   const newForecastTime = await downloadFiles(
     forecastInfo ? forecastInfo.time : new Date(0),
     forecastConfigName,
-    gribPath,
   );
   if (!newForecastTime) {
     return false;
   }
   console.log('download complete');
   console.log('update Database');
-  const files = getFiles(gribPath);
+  const files = getFiles('./grib_data');
   const sortedFiles = dataValues.map((value) =>
     sortFiles(files, value, forecastConfigName),
   );
   if (wgrib2) {
     console.log('wgrib2');
-    // Placeholder for wgrib2
+    await convertAllWGrib2(sortedFiles, forecastConfigName);
+    const ncFiles = getFiles('./grib_data');
+    const sortedNcFiles = dataValues.map((value) =>
+      sortFiles(ncFiles, value, forecastConfigName),
+    );
+    await convertAllNetCDFToJSON(sortedNcFiles, forecastConfigName);
   } else {
     console.log('grib2json');
     await convertAllGribToJSON(sortedFiles, forecastConfigName);
@@ -77,7 +109,7 @@ const updateDatabase = async (forecastConfigName, wgrib2) => {
   console.log('updated Database');
 
   console.log('delete files');
-  await deleteFiles(getFiles(gribPath));
+  await deleteFiles(getFiles('./grib_data'));
   console.log('deleted files');
   console.log('Database is up to date');
   return true;

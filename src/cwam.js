@@ -11,4 +11,4 @@ const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'mongo connection error'));
 
 const wgrib2 = true;
-updateDatabase('cwam').then((res) => db.close());
+updateDatabase('cwam', wgrib2).then((res) => db.close());

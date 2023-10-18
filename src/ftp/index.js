@@ -1,6 +1,3 @@
-/* eslint-disable operator-linebreak */
-/* eslint-disable no-await-in-loop */
-/* eslint-disable no-restricted-syntax */
 const fs = require('fs');
 const ftp = require('basic-ftp');
 const decompress = require('decompress');
@@ -39,17 +36,17 @@ const getFileTimestamps = (files) => {
   });
 };
 
-const decompressFile = async (file, gribPath) => {
+const decompressFile = async (file) => {
   const regex = /.*(?=.bz2)/;
-  await decompress(`${gribPath}/${file}`, './', {
+  await decompress(`./grib_data/${file}`, './', {
     plugins: [
       decompressBzip2({
-        path: `${gribPath}/${file.match(regex)[0]}`,
+        path: `./grib_data/${file.match(regex)[0]}`,
       }),
     ],
   });
-  await fs.unlinkSync(`${gribPath}/${file}`);
-  fs.chmodSync(`${gribPath}/${file.match(regex)[0]}`, 0o755);
+  await fs.unlinkSync(`./grib_data/${file}`);
+  fs.chmodSync(`./grib_data/${file.match(regex)[0]}`, 0o755);
 };
 
 const getServerTimestamp = (fileList) => {
@@ -60,7 +57,7 @@ const getServerTimestamp = (fileList) => {
   return new Date(Math.max(...fileTimestamps));
 };
 
-const downloadFiles = async (databaseTimestamp, forecastConfigName, gribPath) => {
+const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
   const server = config[forecastConfigName].server;
   const dict = config[forecastConfigName].dict;
   const dataValues = config[forecastConfigName].dataValues;
@@ -89,7 +86,12 @@ const downloadFiles = async (databaseTimestamp, forecastConfigName, gribPath) =>
       const forecastTimesBefore = forecastTimes.filter(
         (time) => time < nextForecastTime,
       );
-      const nextForecastTimeBefore = getNextForecastTime(forecastTimesBefore);
+
+      // check for day shift
+      let nextForecastTimeBefore =
+        forecastTimesBefore.length !== 0
+          ? getNextForecastTime(forecastTimesBefore)
+          : forecastTimes[forecastTimes.length - 1];
 
       const nexForecasstFileList = await client.list(
         `${dict}/${nextForecastTimeBefore}`,
@@ -117,11 +119,23 @@ const downloadFiles = async (databaseTimestamp, forecastConfigName, gribPath) =>
       clientList = clientList
         .map((file) => file.name)
         .filter((name) => name.includes(fCModel) && name.includes(fCHeight));
+
+      //check for actual data
+      const latestModiefedAtDate = Math.max(
+        ...clientList.map((file) => {
+          const tenDigitsRegex = /(?<!\d)\d{10}(?!\d)/;
+          return file.match(tenDigitsRegex)[0];
+        }),
+      );
+      //filter out old files
+      clientList = clientList.filter((file) =>
+        file.includes(latestModiefedAtDate),
+      );
+
       // download file per file
       for (const file of clientList) {
-        
-        await client.downloadTo(`${gribPath}/${file}`, `./${value}/${file}`);
-        await decompressFile(file, gribPath);
+        await client.downloadTo(`./grib_data/${file}`, `./${value}/${file}`);
+        await decompressFile(file);
       }
     }
     client.close();

@@ -6,7 +6,7 @@ const cwam = {
   serverDataTimeDelay: 5 * 60 * 1000,
   server: 'opendata.dwd.de',
   dict: 'weather/maritime/wave_models/cwam/grib',
-  regexNameValue: /(?<=CWAM_).+(?=_[0-9]+_[0-9]+\.grib)/,
+  regexNameValue: /(?<=CWAM_).+(?=_[0-9]+_[0-9]+\.[a-zA-Z]+)/,
 };
 
 module.exports = {
