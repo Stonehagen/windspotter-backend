@@ -29,9 +29,9 @@ const getGribIndex = (forecastHeader, spot) => {
   const lo2 = getAbsoluteLon(forecastHeader.lo1, forecastHeader.lo2);
   const spotLon = getAbsoluteLon(forecastHeader.lo1, spot.lon);
 
-  const latRow = (spot.lat - forecastHeader.la1) / forecastHeader.dy;
-  const latWidth = (lo2 - forecastHeader.lo1) / forecastHeader.dx + 1;
-  const lonPos = (spotLon - forecastHeader.lo1) / forecastHeader.dx;
+  const latRow = Math.round((spot.lat - forecastHeader.la1) / forecastHeader.dy);
+  const latWidth = Math.round((lo2 - forecastHeader.lo1) / forecastHeader.dx + 1);
+  const lonPos = Math.round((spotLon - forecastHeader.lo1) / forecastHeader.dx);
   return Math.round(latRow * latWidth + lonPos);
 };
 
@@ -47,16 +47,22 @@ const calculateDataValue = (spot, forecastHeader, forecastData) => {
   const x2 = getMaxPoint(x, forecastHeader.dx);
   const y1 = getMinPoint(y, forecastHeader.dy);
   const y2 = getMaxPoint(y, forecastHeader.dy);
-  const Q11 = forecastData[getGribIndex(forecastHeader, { lon: x1, lat: y1 })];
-  const Q21 = forecastData[getGribIndex(forecastHeader, { lon: x2, lat: y1 })];
-  const Q22 = forecastData[getGribIndex(forecastHeader, { lon: x2, lat: y2 })];
-  const Q12 = forecastData[getGribIndex(forecastHeader, { lon: x1, lat: y2 })];
+  let Q11 = forecastData[getGribIndex(forecastHeader, { lon: x1, lat: y1 })];
+  let Q21 = forecastData[getGribIndex(forecastHeader, { lon: x2, lat: y1 })];
+  let Q22 = forecastData[getGribIndex(forecastHeader, { lon: x2, lat: y2 })];
+  let Q12 = forecastData[getGribIndex(forecastHeader, { lon: x1, lat: y2 })];
+
+  Q11 = Q11 > 9999999 ? 0 : Q11;
+  Q21 = Q21 > 9999999 ? 0 : Q21;
+  Q22 = Q22 > 9999999 ? 0 : Q22;
+  Q12 = Q12 > 9999999 ? 0 : Q12;
 
   const R1 = ((x2 - x) / (x2 - x1)) * Q11 + ((x - x1) / (x2 - x1)) * Q21;
   const R2 = ((x2 - x) / (x2 - x1)) * Q12 + ((x - x1) / (x2 - x1)) * Q22;
 
   const P = ((y2 - y) / (y2 - y1)) * R1 + ((y - y1) / (y2 - y1)) * R2;
   return P;
+
 };
 
 module.exports = {
