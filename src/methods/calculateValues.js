@@ -57,6 +57,8 @@ const calculateDataValue = (spot, forecastHeader, forecastData) => {
   Q22 = Q22 > 9999999 ? 0 : Q22;
   Q12 = Q12 > 9999999 ? 0 : Q12;
 
+  
+
   const R1 = ((x2 - x) / (x2 - x1)) * Q11 + ((x - x1) / (x2 - x1)) * Q21;
   const R2 = ((x2 - x) / (x2 - x1)) * Q12 + ((x - x1) / (x2 - x1)) * Q22;
 
