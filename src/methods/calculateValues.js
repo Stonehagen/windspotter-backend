@@ -29,8 +29,12 @@ const getGribIndex = (forecastHeader, spot) => {
   const lo2 = getAbsoluteLon(forecastHeader.lo1, forecastHeader.lo2);
   const spotLon = getAbsoluteLon(forecastHeader.lo1, spot.lon);
 
-  const latRow = Math.round((spot.lat - forecastHeader.la1) / forecastHeader.dy);
-  const latWidth = Math.round((lo2 - forecastHeader.lo1) / forecastHeader.dx + 1);
+  const latRow = Math.round(
+    (spot.lat - forecastHeader.la1) / forecastHeader.dy,
+  );
+  const latWidth = Math.round(
+    (lo2 - forecastHeader.lo1) / forecastHeader.dx + 1,
+  );
   const lonPos = Math.round((spotLon - forecastHeader.lo1) / forecastHeader.dx);
   return Math.round(latRow * latWidth + lonPos);
 };
@@ -57,17 +61,21 @@ const calculateDataValue = (spot, forecastHeader, forecastData) => {
   Q22 = Q22 > 9999999 ? 0 : Q22;
   Q12 = Q12 > 9999999 ? 0 : Q12;
 
-  
+  // If there are points with no measurements, return the minimum value of the other points
+  const pointArray = [Q11, Q21, Q22, Q12].filter((point) => point > 0);
+  if (pointArray.length > 0 && pointArray.length < 4) {
+    const min = Math.min(...pointArray);
+    return min;
+  }
 
   const R1 = ((x2 - x) / (x2 - x1)) * Q11 + ((x - x1) / (x2 - x1)) * Q21;
   const R2 = ((x2 - x) / (x2 - x1)) * Q12 + ((x - x1) / (x2 - x1)) * Q22;
 
   const P = ((y2 - y) / (y2 - y1)) * R1 + ((y - y1) / (y2 - y1)) * R2;
   return P;
-
 };
 
 module.exports = {
   inGrid,
   calculateDataValue,
-}
+};
