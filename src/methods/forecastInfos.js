@@ -17,7 +17,7 @@ const getDateFromString = (dateString) => {
     `${dateString.slice(0, 4)}-${dateString.slice(4, 6)}-${dateString.slice(
       6,
       8,
-    )}T${dateString.slice(8, 10)}:00`,
+    )}T${dateString.slice(8, 10)}:00:00.000Z`,
   );
 };
 
