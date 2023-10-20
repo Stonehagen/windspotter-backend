@@ -8,7 +8,7 @@ const updateSpotForecast = async (
   dataValue,
 ) => {
   // check if forecast already exists
-  const forecastFound = spot.forecasts.find(
+  const forecastData = spot.forecasts.find(
     (spotForecast) =>
       spotForecast.forecastInfo.toString() === forecastInfo._id.toString(),
   );
@@ -19,8 +19,12 @@ const updateSpotForecast = async (
       forecastHeader.forecastTime * 60000,
   );
 
+  const twoDaysBefore = new Date(
+    new Date().getTime() - 2 * 24 * 60 * 60 * 1000,
+  );
+
   // if not create new forecast
-  if (!forecastFound) {
+  if (!forecastData) {
     const forecastData = new Forecast({
       _id: new mongoose.Types.ObjectId(),
       forecastInfo,
@@ -33,13 +37,21 @@ const updateSpotForecast = async (
 
     await forecastData.save();
   } else {
-    // if forecast exists update data
-    forecastFound.time = forecastHeader.refTime;
-    forecastFound[forecastHeader.forecastType] = {
-      ...forecastFound[forecastHeader.forecastType],
+    // if forecast exists remove data that is to old
+    for (const key in forecastData[forecastHeader.forecastType]) {
+      const dateFromKey = new Date(key);
+      if (dateFromKey.getTime() < twoDaysBefore.getTime()) {
+        delete forecastData[forecastHeader.forecastType][key];
+      }
+    }
+
+    // update data
+    forecastData.time = forecastHeader.refTime;
+    forecastData[forecastHeader.forecastType] = {
+      ...forecastData[forecastHeader.forecastType],
       [forecastTime]: dataValue,
     };
-    await forecastFound.save();
+    await forecastData.save();
   }
   await spot.populate({
     path: 'forecasts',
@@ -49,4 +61,4 @@ const updateSpotForecast = async (
 
 module.exports = {
   updateSpotForecast,
-}
+};

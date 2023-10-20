@@ -106,6 +106,8 @@ const updateDatabase = async (forecastConfigName, wgrib2) => {
     console.log('grib2json');
     await convertAllGribToJSON(sortedFiles, forecastConfigName);
   }
+  // update forecastInfo
+  await forecastInfo.save();
   console.log('updated Database');
 
   console.log('delete files');

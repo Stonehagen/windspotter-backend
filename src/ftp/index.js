@@ -5,17 +5,17 @@ const decompressBzip2 = require('decompress-bzip2');
 
 const config = require('../config');
 
-const getNextForecastTime = (forecastTimes) => {
+const getNextForecastTimeHour = (forecastTimes) => {
   // convert Strings into Numbers
   const forecastTimesNumbers = forecastTimes.map((hour) => parseInt(hour, 10));
   // get the hour of the current time
   const hourNow = new Date().getUTCHours();
   // get the latest forcastTime to hour current time
-  const nextForecastTime = Math.max(
+  const nextForecastTimeHour = Math.max(
     ...forecastTimesNumbers.filter((hour) => hour <= hourNow),
   );
   // return the number as string with leading zeros
-  return String(nextForecastTime).padStart(2, '0');
+  return String(nextForecastTimeHour).padStart(2, '0');
 };
 
 const getFileTimestamps = (files) => {
@@ -73,44 +73,44 @@ const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
     // convert list of folders to list of folderNames (forecastTimes)
     const forecastTimes = dirList.map((folderInfo) => folderInfo.name);
     // get the latest forecast folder name
-    const nextForecastTime = getNextForecastTime(forecastTimes);
-    const fileList = await client.list(`${dict}/${nextForecastTime}`);
+    let nextForecastTimeHour = getNextForecastTimeHour(forecastTimes);
+    const fileList = await client.list(`${dict}/${nextForecastTimeHour}`);
     // get the last update time from the requested files
     const serverTimestamp = getServerTimestamp(fileList);
     // check if the files are older than the data in our database
     if (
       serverTimestamp < databaseTimestamp ||
-      serverTimestamp - new Date() < 5 * 60 * 1000
+      new Date() - serverTimestamp  < 5 * 60 * 1000
     ) {
       // get one forecast time before
       const forecastTimesBefore = forecastTimes.filter(
-        (time) => time < nextForecastTime,
+        (time) => time < nextForecastTimeHour,
       );
-
       // check for day shift
-      let nextForecastTimeBefore =
+      let prevForecastTimeHour =
         forecastTimesBefore.length !== 0
-          ? getNextForecastTime(forecastTimesBefore)
+          ? getNextForecastTimeHour(forecastTimesBefore)
           : forecastTimes[forecastTimes.length - 1];
 
       const nexForecasstFileList = await client.list(
-        `${dict}/${nextForecastTimeBefore}`,
+        `${dict}/${prevForecastTimeHour}`,
       );
       // get the last update time from the requested files
       const nextServerTimestamp = getServerTimestamp(nexForecasstFileList);
       // check if the files are older than the data in our database
       if (
         nextServerTimestamp < databaseTimestamp ||
-        (databaseTimestamp.getUTCHours() == nextForecastTimeBefore &&
+        (databaseTimestamp.getUTCHours() == prevForecastTimeHour &&
           databaseTimestamp.getUTCDate() == nextServerTimestamp.getUTCDate())
       ) {
-        // console.log('database is up to date');
-        // client.close();
-        // return null;
+        console.log('database is up to date');
+        client.close();
+        return null;
       }
-      await client.cd(`${dict}/${nextForecastTimeBefore}`);
+      await client.cd(`${dict}/${prevForecastTimeHour}`);
+      nextForecastTimeHour = prevForecastTimeHour;
     } else {
-      await client.cd(`${dict}/${nextForecastTime}`);
+      await client.cd(`${dict}/${nextForecastTimeHour}`);
     }
     // create a list of the files und download them
     for (const value of dataValues) {
@@ -139,7 +139,8 @@ const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
       }
     }
     client.close();
-    return nextForecastTime;
+    //convert nextForecastTimeHour to Date
+    return nextForecastTimeHour;
   } catch (err) {
     console.log(err);
     return false;
