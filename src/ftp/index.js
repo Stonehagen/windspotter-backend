@@ -64,6 +64,7 @@ const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
   const fCModel = config[forecastConfigName].fCModel;
   const fCHeight = config[forecastConfigName].fCHeight;
   const client = new ftp.Client();
+
   try {
     await client.access({
       host: server,
@@ -119,7 +120,6 @@ const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
       clientList = clientList
         .map((file) => file.name)
         .filter((name) => name.includes(fCModel) && name.includes(fCHeight));
-
       //check for actual data
       const latestModiefedAtDate = Math.max(
         ...clientList.map((file) => {
