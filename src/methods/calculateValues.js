@@ -61,10 +61,10 @@ const calculateDataValue = (spot, forecastHeader, forecastData) => {
   Q22 = Q22 > 9999999 ? 0 : Q22;
   Q12 = Q12 > 9999999 ? 0 : Q12;
 
-  // If there are points with no measurements, return the minimum value of the other points
+  // If there are points with no measurements, return the maximum value of the other points
   const pointArray = [Q11, Q21, Q22, Q12].filter((point) => point > 0);
   if (pointArray.length > 0 && pointArray.length < 4) {
-    const min = Math.min(...pointArray);
+    const min = Math.max(...pointArray);
     return min;
   }
 
