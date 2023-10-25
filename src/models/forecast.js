@@ -11,6 +11,7 @@ const ForecastSchema = new Schema({
   vmax_10m: { type: Object },
   clct_mod: { type: Object },
   prr_gsp: { type: Object },
+  rain_gsp: { type: Object },
   mwd: { type: Object },
   swh: { type: Object },
   tm10: { type: Object },
