@@ -13,6 +13,7 @@ const populateSpots = async (
   spots,
   forecastInfo,
   forecastConfigName,
+  lastValues,
 ) => {
   const forecastJson = await getJson(filename, {
     scriptPath: './src/convert_grib/grib2json/src/bin/grib2json',
@@ -35,6 +36,24 @@ const populateSpots = async (
   // Wait for all dataValue promises to resolve
   const dataValues = await Promise.all(dataValuePromises);
 
+  const rawDataValues = [...dataValues];
+
+  // If the forecastHeader.forecastType is 'rain_con' oder 'rain_gsp'
+  // and the lastValues array is not empty, calculate the difference
+  // between the current and the last forecast and update the dataValues array
+  if (
+    forecastHeader.forecastType === 'rain_con' ||
+    forecastHeader.forecastType === 'rain_gsp'
+  ) {
+    if (lastValues.length > 0) {
+      for (const [index, value] of dataValues.entries()) {
+        if (value !== null) {
+          dataValues[index] = value - lastValues[index];
+        }
+      }
+    }
+  }
+
   // Update spot forecasts with calculated data values
   for (const [index, spot] of spots.entries()) {
     if (dataValues[index] !== null) {
@@ -46,6 +65,7 @@ const populateSpots = async (
       );
     }
   }
+  return rawDataValues;
 };
 
 const addEmptyForecastToSpots = async (forecastInfo) => {
@@ -94,12 +114,14 @@ const convertGribToJson = async (
     return false;
   }
   try {
-    for (const filename of filenames) {
-      await populateSpots(
+    let lastValues = [];
+    for (const [index, filename] of filenames.entries()) {
+      lastValues = await populateSpots(
         `./grib_data/${filename}`,
         spots,
         forecastInfo,
         forecastConfigName,
+        lastValues,
       );
     }
     for (const spot of spots) {
