@@ -4,9 +4,7 @@ const grib2json = require('grib2json').default;
 const { Spot, Forecast } = require('../../models');
 const { calculateDataValue } = require('../../methods/calculateValues');
 const { updateSpotForecast } = require('../../methods/updateDatabase');
-const {
-  getforecastHeader,
-} = require('../../methods/forecastInfos');
+const { getforecastHeader } = require('../../methods/forecastInfos');
 
 const getJson = util.promisify(grib2json);
 
@@ -38,11 +36,16 @@ const populateSpots = async (
   const dataValues = await Promise.all(dataValuePromises);
 
   // Update spot forecasts with calculated data values
-  spots.forEach((spot, index) => {
+  for (const [index, spot] of spots.entries()) {
     if (dataValues[index] !== null) {
-      updateSpotForecast(spot, forecastInfo, forecastHeader, dataValues[index]);
+      await updateSpotForecast(
+        spot,
+        forecastInfo,
+        forecastHeader,
+        dataValues[index],
+      );
     }
-  });
+  }
 };
 
 const addEmptyForecastToSpots = async (forecastInfo) => {
