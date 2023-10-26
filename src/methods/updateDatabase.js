@@ -34,6 +34,7 @@ const updateSpotForecast = async (
       },
     });
     spot.forecasts.push(forecastData);
+    await forecastData.save();
   } else {
     // if forecast exists remove data that is to old
     for (const key in forecastData[forecastHeader.forecastType]) {
@@ -49,8 +50,8 @@ const updateSpotForecast = async (
       ...forecastData[forecastHeader.forecastType],
       [forecastTime.toUTCString()]: dataValue,
     };
+    await forecastData.save();
   }
-  await forecastData.save();
   await spot.populate({
     path: 'forecasts',
     match: { forecastInfo: forecastInfo._id.toString() },

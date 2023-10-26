@@ -36,19 +36,27 @@ const populateSpots = async (
   // Wait for all dataValue promises to resolve
   const dataValues = await Promise.all(dataValuePromises);
 
-  const rawDataValues = [...dataValues];
+  const rawDataValues = {
+    dataValues: [...dataValues],
+    forecastTime: forecastHeader.forecastTime,
+  };
 
+  // convert accumulated rain to rain per hour
   // If the forecastHeader.forecastType is 'rain_con' oder 'rain_gsp'
   // and the lastValues array is not empty, calculate the difference
-  // between the current and the last forecast and update the dataValues array
+  // between the current and the last forecast and divide it by the
+  // difference between the current and the last forecast time
   if (
     forecastHeader.forecastType === 'rain_con' ||
     forecastHeader.forecastType === 'rain_gsp'
   ) {
-    if (lastValues.length > 0) {
+    if (lastValues.dataValues.length > 0) {
       for (const [index, value] of dataValues.entries()) {
         if (value !== null) {
-          dataValues[index] = value - lastValues[index];
+          dataValues[index] =
+            value -
+            lastValues.dataValues[index] /
+              ((lastValues.forecastTime - forecastHeader.forecastTime) / 60);
         }
       }
     }

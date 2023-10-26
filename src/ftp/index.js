@@ -81,7 +81,7 @@ const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
     // check if the files are older than the data in our database
     if (
       serverTimestamp < databaseTimestamp ||
-      new Date() - serverTimestamp  < 5 * 60 * 1000
+      new Date() - serverTimestamp < 5 * 60 * 1000
     ) {
       // get one forecast time before
       const forecastTimesBefore = forecastTimes.filter(
