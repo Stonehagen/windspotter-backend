@@ -46,24 +46,20 @@ const populateSpots = async (
   // and the lastValues array is not empty, calculate the difference
   // between the current and the last forecast and divide it by the
   // difference between the current and the last forecast time
-  if (
-    forecastHeader.forecastType === 'rain_con' ||
-    forecastHeader.forecastType === 'rain_gsp'
-  ) {
+  if (forecastHeader.forecastType === 'rain_gsp') {
     if (lastValues.dataValues.length > 0) {
       for (const [index, value] of dataValues.entries()) {
         if (value !== null) {
           dataValues[index] =
             (value - lastValues.dataValues[index]) /
-            ((lastValues.forecastTime - forecastHeader.forecastTime) / 60);
+            ((forecastHeader.forecastTime - lastValues.forecastTime) / 60);
         }
       }
     }
   }
-
   // Update spot forecasts with calculated data values
   for (const [index, spot] of spots.entries()) {
-    if (dataValues[index] !== null) {
+    if (dataValues[index]) {
       await updateSpotForecast(
         spot,
         forecastInfo,
