@@ -19,7 +19,7 @@ const populateSpots = async (
     forecastConfigName,
   );
 
-  const NcData = readFileSync(`./grib_data/${filename}`);
+  const NcData = readFileSync(`./grib_data_${forecastConfigName}/${filename}`);
   const reader = new NetCDFReader(NcData);
   const variableName = reader.header.variables[3].name;
   const valueArray = reader.getDataVariable(variableName)[0];

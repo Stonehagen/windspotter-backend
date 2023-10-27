@@ -8,7 +8,7 @@ const wgrib2 = process.env.WGRIB2_PATH
 const convertWGrib2ToNetcdf = async (filenames, forecastConfigName) => {
   try {
     for (const filename of filenames) {
-      const pathGribFile = `./grib_data/${filename}`;
+      const pathGribFile = `./grib_data_${forecastConfigName}/${filename}`;
       const pathNetcdfFile = pathGribFile.replace('.grib2', '.nc');
 
       if (
@@ -18,7 +18,7 @@ const convertWGrib2ToNetcdf = async (filenames, forecastConfigName) => {
         shell.echo('Error: wgrib2 failed');
         shell.exit(1);
       }
-      await fs.unlinkSync(`./grib_data/${filename}`);
+      await fs.unlinkSync(`./grib_data_${forecastConfigName}/${filename}`);
     }
   } catch (err) {
     console.log(err);

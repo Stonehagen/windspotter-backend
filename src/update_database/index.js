@@ -29,12 +29,13 @@ const sortFiles = (files, value, forecastConfigName) => {
   );
 };
 
-const deleteFiles = async (files) => {
+const deleteFiles = async (path) => {
+  const files = await getFiles(path);
   if (!files) {
     return;
   }
   const unlinkPromises = files.map((file) =>
-    fs.promises.unlink(`./grib_data/${file}`),
+    fs.promises.unlink(`${path}/${file}`),
   );
   await Promise.all(unlinkPromises);
 };
@@ -75,7 +76,7 @@ const updateDatabase = async (forecastConfigName, wgrib2) => {
   dataValues = config[forecastConfigName].dataValues;
 
   console.log('delete old files');
-  await deleteFiles(getFiles('./grib_data'));
+  await deleteFiles(`./grib_data_${forecastConfigName}}`);
   console.log('deleted old files');
 
   const forecastInfo = await ForecastInfo.findOne({ name: forecastName });
@@ -90,14 +91,14 @@ const updateDatabase = async (forecastConfigName, wgrib2) => {
   }
   console.log('download complete');
   console.log('update Database');
-  const files = getFiles('./grib_data');
+  const files = getFiles(`./grib_data_${forecastConfigName}}`);
   const sortedFiles = dataValues.map((value) =>
     sortFiles(files, value, forecastConfigName),
   );
   if (wgrib2) {
     console.log('wgrib2');
     await convertAllWGrib2(sortedFiles, forecastConfigName);
-    const ncFiles = getFiles('./grib_data');
+    const ncFiles = getFiles(`./grib_data_${forecastConfigName}}`);
     const sortedNcFiles = dataValues.map((value) =>
       sortFiles(ncFiles, value, forecastConfigName),
     );
@@ -109,7 +110,7 @@ const updateDatabase = async (forecastConfigName, wgrib2) => {
   console.log('updated Database');
 
   console.log('delete files');
-  await deleteFiles(getFiles('./grib_data'));
+  await deleteFiles(`./grib_data_${forecastConfigName}}`);
   console.log('deleted files');
   console.log('Database is up to date');
   return true;

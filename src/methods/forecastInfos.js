@@ -93,18 +93,21 @@ const getforecastHeader = (
 
 const getForecastInfo = async (filename, forecastConfigName) => {
   if (forecastConfigName === 'cwam') {
-    return getForecastInfoFromNetCDF(filename);
+    return getForecastInfoFromNetCDF(filename, forecastConfigName);
   } else {
     return getForecastInfoFromGrib(filename, forecastConfigName);
   }
 };
 
 const getForecastInfoFromGrib = async (filename, forecastConfigName) => {
-  const forecastJson = await getJson(`./grib_data/${filename}`, {
-    scriptPath: './src/convert_grib/grib2json/src/bin/grib2json',
-    names: true, // (default false): Return descriptive names too
-    data: true, // (default false): Return data, not just headers
-  });
+  const forecastJson = await getJson(
+    `./grib_data_${forecastConfigName}/${filename}`,
+    {
+      scriptPath: './src/convert_grib/grib2json/src/bin/grib2json',
+      names: true, // (default false): Return descriptive names too
+      data: true, // (default false): Return data, not just headers
+    },
+  );
 
   // get grib info from header
   const forecastHeader = getforecastHeader(
@@ -133,8 +136,8 @@ const getForecastInfoFromGrib = async (filename, forecastConfigName) => {
   return forecastInfo;
 };
 
-const getForecastInfoFromNetCDF = async (filename) => {
-  const data = readFileSync(`./grib_data/${filename}`);
+const getForecastInfoFromNetCDF = async (filename, forecastConfigName) => {
+  const data = readFileSync(`./grib_data_${forecastConfigName}/${filename}`);
   const reader = new NetCDFReader(data);
   const lonName = reader.header.variables[1].name;
   const latName = reader.header.variables[0].name;
