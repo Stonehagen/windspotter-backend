@@ -1,3 +1,5 @@
 .env
 node_modules
-grib_data/*
+grib_data_cwam/*
+grib_data_iconEu/*
+grib_data_iconD2/*
