@@ -54,9 +54,8 @@ const populateSpots = async (
       for (const [index, value] of dataValues.entries()) {
         if (value !== null) {
           dataValues[index] =
-            value -
-            lastValues.dataValues[index] /
-              ((lastValues.forecastTime - forecastHeader.forecastTime) / 60);
+            (value - lastValues.dataValues[index]) /
+            ((lastValues.forecastTime - forecastHeader.forecastTime) / 60);
         }
       }
     }

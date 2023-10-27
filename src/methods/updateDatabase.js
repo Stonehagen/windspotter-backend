@@ -48,8 +48,9 @@ const updateSpotForecast = async (
     forecastData.time = forecastHeader.refTime;
     forecastData[forecastHeader.forecastType] = {
       ...forecastData[forecastHeader.forecastType],
-      [forecastTime.toUTCString()]: dataValue,
     };
+    (forecastData[forecastHeader.forecastType][forecastTime.toUTCString()] =
+      dataValue),
     await forecastData.save();
   }
   await spot.populate({
