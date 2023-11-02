@@ -8,6 +8,7 @@ const SpotSchema = new Schema({
   lat: { type: Number, required: true },
   lon: { type: Number, required: true },
   forecasts: [{ type: Schema.Types.ObjectId, ref: 'Forecast' }],
+  windDirections: [{ type: String }],
 });
 
 module.exports = mongoose.model('Spot', SpotSchema);

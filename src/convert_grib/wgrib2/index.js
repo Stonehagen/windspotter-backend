@@ -3,7 +3,7 @@ const fs = require('fs');
 const dotenv = require('dotenv');
 dotenv.config({ path: __dirname + '/../.env' });
 
-const wgrib2 = process.env.WGRIB2_PATH
+const wgrib2 = process.env.WGRIB2_PATH;
 
 const convertWGrib2ToNetcdf = async (filenames, forecastConfigName) => {
   try {
@@ -12,8 +12,8 @@ const convertWGrib2ToNetcdf = async (filenames, forecastConfigName) => {
       const pathNetcdfFile = pathGribFile.replace('.grib2', '.nc');
 
       if (
-        shell.exec(`${wgrib2} ${pathGribFile} -netcdf ${pathNetcdfFile}`).code !==
-        0
+        shell.exec(`${wgrib2} ${pathGribFile} -netcdf ${pathNetcdfFile}`)
+          .code !== 0
       ) {
         shell.echo('Error: wgrib2 failed');
         shell.exit(1);
