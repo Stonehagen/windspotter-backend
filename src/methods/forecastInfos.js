@@ -71,7 +71,7 @@ const getForecastHeaderCWAM = (filename, forecastInfo, forecastConfigName) => {
 };
 
 const getforecastHeader = (
-  { lo1, lo2, la1, la2, dx, dy, refTime, forecastTime },
+  { lo1, lo2, la1, la2, dx, dy, refTime, forecastTime, nx, ny },
   filename,
   forecastConfigName,
 ) => {
@@ -88,6 +88,8 @@ const getforecastHeader = (
     la2,
     dx,
     dy,
+    nx,
+    ny,
   };
 };
 
@@ -115,7 +117,8 @@ const getForecastInfoFromGrib = async (filename, forecastConfigName) => {
     filename,
     forecastConfigName,
   );
-  const { forecastName, refTime, lo1, lo2, la1, la2, dy, dx } = forecastHeader;
+  const { forecastName, refTime, lo1, lo2, la1, la2, dy, dx, nx, ny } =
+    forecastHeader;
 
   // check if forecast already exists - if not create new forecast
   const forecastInfo = await ForecastInfo.findOneAndUpdate(
@@ -129,6 +132,8 @@ const getForecastInfoFromGrib = async (filename, forecastConfigName) => {
       la2,
       dy,
       dx,
+      nx,
+      ny,
     },
     { upsert: true, new: true },
   );
@@ -155,7 +160,7 @@ const getForecastInfoFromNetCDF = async (filename, forecastConfigName) => {
 
   const forecastInfo = await ForecastInfo.findOneAndUpdate(
     { name },
-    { name, time, lo1, lo2, la1, la2, dy, dx },
+    { name, time, lo1, lo2, la1, la2, dy, dx, nx, ny },
     { upsert: true, new: true },
   );
 

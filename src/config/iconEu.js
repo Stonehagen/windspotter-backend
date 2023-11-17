@@ -7,6 +7,7 @@ const iconEu = {
   server: 'opendata.dwd.de',
   dict: 'weather/nwp/icon-eu/grib',
   regexNameValue: /(?<=_[0-9]+_[0-9]+_).+(?=\.grib)/,
+  regexTimeValue: /(?<=_[0-9]+_)[0-9]+(?=_.+grib)/,
 };
 
 module.exports = {

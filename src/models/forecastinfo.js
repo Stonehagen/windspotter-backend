@@ -11,6 +11,8 @@ const ForecastInfoSchema = new Schema({
   la2: { type: Number, required: true },
   dy: { type: Number, required: true },
   dx: { type: Number, required: true },
+  nx: { type: Number, required: true },
+  ny: { type: Number, required: true },
 });
 
 module.exports = mongoose.model('ForecastInfo', ForecastInfoSchema);
