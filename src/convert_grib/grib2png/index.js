@@ -104,7 +104,12 @@ const updateForecastMap = async (mapData, url, firstFile) => {
         if (dateFromKey.getTime() < twoDaysBefore.getTime()) {
           // delete file from cloudanary
           const public_id = mapForecast.forecastMaps[key].url.split('/').pop();
-          await cloudinary.uploader.destroy(public_id);
+          await cloudinary.api
+            .delete_resources([public_id], {
+              type: 'upload',
+              resource_type: 'image',
+            })
+            .then(console.log);
 
           // delete forecastMap from DB
           delete mapForecast.forecastMaps[key];
@@ -169,8 +174,12 @@ const convertJSON2PNG = async (forecastUandV, firstFile) => {
       const uValue = u[k];
       const vValue = v[k];
       // scale values from 0-255 depending on min and max values
-      map.data[i + 0] = Math.round(((uValue - uMin) / (uMax - uMin)) * 255);
-      map.data[i + 1] = Math.round(((vValue - vMin) / (vMax - vMin)) * 255);
+      map.data[i + 0] = Math.round(
+        ((uValue - mapData.uMin) / (mapData.uMax - mapData.uMin)) * 255,
+      );
+      map.data[i + 1] = Math.round(
+        ((vValue - mapData.vMin) / (mapData.vMax - mapData.vMin)) * 255,
+      );
       map.data[i + 2] = 0;
       map.data[i + 3] = 255;
     }
@@ -213,7 +222,8 @@ const convertJSON2PNG = async (forecastUandV, firstFile) => {
 // convert grib files to png and upload to cloudinary
 const convertGrib2Png = async (windFiles, forecastConfigName) => {
   try {
-    for (const [index, filenames] of windFiles.entries()) {
+    let firstFile = true;
+    for (const [_, filenames] of windFiles.entries()) {
       const forecastUandV = {};
       for (const filename of filenames) {
         const forecastJSON = await getForecastJSON(
@@ -230,7 +240,8 @@ const convertGrib2Png = async (windFiles, forecastConfigName) => {
         }
       }
       // convert JSON to PNG and upload to cloudinary and delete old files
-      await convertJSON2PNG(forecastUandV, index === 0);
+      await convertJSON2PNG(forecastUandV, firstFile);
+      firstFile = false;
     }
   } catch (err) {
     console.log(err);

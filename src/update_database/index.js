@@ -68,7 +68,11 @@ const convertAllNetCDFToJSON = async (filesList, forecastConfigName) => {
   await Promise.all(convertPromises);
 };
 
-const convertAllGribToJSON = async (filesList, forecastConfigName) => {
+const convertAllGribToJSON = async (
+  filesList,
+  forecastConfigName,
+  forecastMap,
+) => {
   const forecastInfo = await getForecastInfo(
     filesList[0][0],
     forecastConfigName,
@@ -92,10 +96,12 @@ const convertAllGribToJSON = async (filesList, forecastConfigName) => {
     );
   }
   const sortedFiles = sortFilesByTime(files, forecastConfigName);
-  await convertGrib2Png(sortedFiles, forecastConfigName);
+  if (forecastMap) {
+    await convertGrib2Png(sortedFiles, forecastConfigName);
+  }
 };
 
-const updateDatabase = async (forecastConfigName, wgrib2) => {
+const updateDatabase = async (forecastConfigName, wgrib2, forecastMap) => {
   forecastName = config[forecastConfigName].forecastName;
   dataValues = config[forecastConfigName].dataValues;
 
@@ -129,7 +135,7 @@ const updateDatabase = async (forecastConfigName, wgrib2) => {
     await convertAllNetCDFToJSON(sortedNcFiles, forecastConfigName);
   } else {
     console.log('grib2json');
-    await convertAllGribToJSON(sortedFiles, forecastConfigName);
+    await convertAllGribToJSON(sortedFiles, forecastConfigName, forecastMap);
   }
   console.log('updated Database');
 
