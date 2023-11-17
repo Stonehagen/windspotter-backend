@@ -1,24 +1,22 @@
+const dotenv = require('dotenv');
+dotenv.config({ path: __dirname + '/../.env' });
 const util = require('util');
-const grib2json = require('grib2json').default;
-const { getforecastHeader } = require('../../methods/forecastInfos');
+const mongoose = require('mongoose');
+const cloudinary = require('cloudinary').v2;
 const PNG = require('pngjs').PNG;
-const fs = require('fs');
-const chroma = require('chroma-js');
-
-//+ forecastHeader:
-// json: {
-//+   "refTime": "2016-04-30T06:00:00.000Z",
-//+   "forecastTime": 0,
-//+   "nx": 360,
-//+   "ny": 181,
-//+   "lo1": 0.0,
-//+   "la1": 90.0,
-//+   "dx": 1.0,
-//+   "dy": 1.0
-// }
-
+const grib2json = require('grib2json').default;
 const getJson = util.promisify(grib2json);
 
+const { getforecastHeader } = require('../../methods/forecastInfos');
+const { MapForecast, ForecastInfo } = require('../../models');
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+});
+
+// get max value of array
 const getMax = (arr) => {
   let len = arr.length;
   let max = -Infinity;
@@ -28,6 +26,7 @@ const getMax = (arr) => {
   return max;
 };
 
+// get min value of array
 const getMin = (arr) => {
   let len = arr.length;
   let min = Infinity;
@@ -37,6 +36,7 @@ const getMin = (arr) => {
   return min;
 };
 
+// get JSON from grib file
 const getForecastJSON = async (filename, forecastConfigName) => {
   const forecastJson = await getJson(filename, {
     scriptPath: './src/convert_grib/grib2json/src/bin/grib2json',
@@ -61,101 +61,159 @@ const getForecastJSON = async (filename, forecastConfigName) => {
   };
 };
 
-const convertJSON2PNG = (forecastUandV) => {
-  const forecastHeader = forecastUandV.forecastHeader;
-
+// update forecastMaps in DB
+const updateForecastMap = async (mapData, url, firstFile) => {
   const forecastTime = new Date(
     // add forecastTime in minutes to refTime to get timestamp of forecast
-    new Date(forecastHeader.refTime).getTime() +
-      forecastHeader.forecastTime * 60000,
+    new Date(mapData.refTime).getTime() + mapData.forecastTime * 60000,
   );
-  const filename = `${forecastUandV.forecastName}_${forecastTime}`;
 
+  // get date two days before
+  const twoDaysBefore = new Date(
+    new Date().getTime() - 2 * 24 * 60 * 60 * 1000,
+  );
+
+  // get ForecastInfo
+  const forecastInfo = await ForecastInfo.findOne({
+    name: mapData.forecastName,
+  });
+
+  // get forecastMap
+  const mapForecast = await MapForecast.findOne({
+    forecastInfo: forecastInfo._id,
+  });
+
+  // if not create new forecastMap
+  if (!mapForecast) {
+    const newMapForecast = new MapForecast({
+      _id: new mongoose.Types.ObjectId(),
+      forecastInfo,
+      forecastMaps: {
+        [forecastTime.toUTCString()]: {
+          data: mapData,
+          url,
+        },
+      },
+    });
+    await newMapForecast.save();
+  } else {
+    // if forecast exists remove data that is to old on the first file
+    if (firstFile) {
+      for (const key in mapForecast.forecastMaps) {
+        const dateFromKey = new Date(key);
+        if (dateFromKey.getTime() < twoDaysBefore.getTime()) {
+          // delete file from cloudanary
+          const public_id = mapForecast.forecastMaps[key].url.split('/').pop();
+          await cloudinary.uploader.destroy(public_id);
+
+          // delete forecastMap from DB
+          delete mapForecast.forecastMaps[key];
+        }
+      }
+    }
+
+    // update data in forecastMap
+    mapForecast.forecastMaps[forecastTime.toUTCString()] = {
+      data: mapData,
+      url,
+    };
+    await MapForecast.updateOne(
+      { _id: mapForecast._id },
+      {
+        $set: {
+          forecastMaps: mapForecast.forecastMaps,
+        },
+      },
+    );
+  }
+};
+
+// convert JSON to PNG and upload to cloudinary
+const convertJSON2PNG = async (forecastUandV, firstFile) => {
   const u = forecastUandV['u_10m'];
   const v = forecastUandV['v_10m'];
 
-  const uMin = getMin(u);
-  const uMax = getMax(u);
-  const vMin = getMin(v);
-  const vMax = getMax(v);
-
-  // compress this later
-  const getAbsoluteLon = (lonStart, lonEnd) => {
-    return lonStart > lonEnd ? lonEnd + 360 : lonEnd;
+  const mapData = {
+    forecastName: forecastUandV.forecastHeader.forecastName,
+    forecastTime: forecastUandV.forecastHeader.forecastTime,
+    refTime: forecastUandV.forecastHeader.refTime,
+    height: forecastUandV.forecastHeader.ny,
+    width: forecastUandV.forecastHeader.nx,
+    lo1: forecastUandV.forecastHeader.lo1,
+    la1: forecastUandV.forecastHeader.la1,
+    lo2: forecastUandV.forecastHeader.lo2,
+    la2: forecastUandV.forecastHeader.la2,
+    nx: forecastUandV.forecastHeader.nx,
+    ny: forecastUandV.forecastHeader.ny,
+    dx: forecastUandV.forecastHeader.dx,
+    dy: forecastUandV.forecastHeader.dy,
+    uMin: getMin(u),
+    uMax: getMax(u),
+    vMin: getMin(v),
+    vMax: getMax(v),
   };
-  const lo2 = getAbsoluteLon(forecastHeader.lo1, forecastHeader.lo2);
-  const width = Math.round((lo2 - forecastHeader.lo1) / forecastHeader.dx + 1);
-  const height =
-    Math.round((forecastHeader.la2 - forecastHeader.la1) / forecastHeader.dy) +
-    1;
 
-  fs.writeFileSync(
-    filename + '.json',
-    JSON.stringify(
-      {
-        refTime: forecastHeader.refTime,
-        forecastTime: forecastHeader.forecastTime,
-        nx: forecastHeader.nx,
-        ny: forecastHeader.ny,
-        lo1: forecastHeader.lo1,
-        la1: forecastHeader.la1,
-        lo2: forecastHeader.lo2,
-        la2: forecastHeader.la2,
-        dx: forecastHeader.dx,
-        dy: forecastHeader.dy,
-        width: width,
-        height: height,
-        uMin: uMin,
-        uMax: uMax,
-        vMin: vMin,
-        vMax: vMax,
-      },
-      null,
-      2,
-    ) + '\n',
-  );
-
-  const png = new PNG({
-    width: width,
-    height: height,
+  // create new PNG with size of the forecast
+  const map = new PNG({
+    width: mapData.width,
+    height: mapData.height,
     colorType: 2,
     filterType: 4,
   });
 
-  console.log(forecastHeader);
-
-  const uLen = u.length;
-  const vLen = v.length;
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const i = (y * width + x) * 4;
-      const k = y * width + (width - x);
-      const uValue = u[uLen - k];
-      const vValue = v[vLen - k];
-
-      if (uValue === 'NaN' || vValue === 'NaN') {
-        png.data[i + 0] = 0;
-        png.data[i + 1] = 0;
-        png.data[i + 2] = 0;
-        png.data[i + 3] = 0;
-        continue;
-      } else {
-        // scale values from 0-255 depending on min and max values
-        png.data[i + 0] = Math.round(((uValue - uMin) / (uMax - uMin)) * 255);
-        png.data[i + 1] = Math.round(((vValue - vMin) / (vMax - vMin)) * 255);
-        png.data[i + 2] = 0;
-        png.data[i + 3] = 255;
-      }
+  // set rgba values for each pixel of the PNG depending on u and v values
+  for (let y = 0; y < mapData.height; y++) {
+    for (let x = 0; x < mapData.width; x++) {
+      const i = (y * mapData.width + x) * 4;
+      const k = y * mapData.width + x;
+      const uValue = u[k];
+      const vValue = v[k];
+      // scale values from 0-255 depending on min and max values
+      map.data[i + 0] = Math.round(((uValue - uMin) / (uMax - uMin)) * 255);
+      map.data[i + 1] = Math.round(((vValue - vMin) / (vMax - vMin)) * 255);
+      map.data[i + 2] = 0;
+      map.data[i + 3] = 255;
     }
   }
 
-  png.pack().pipe(fs.createWriteStream(filename + '.png'));
+  // create public_id for cloudinary (filename)
+  const public_id = (() => {
+    const forecastTime =
+      // add forecastTime in minutes to refTime to get timestamp of forecast
+      new Date(mapData.refTime).getTime() + mapData.forecastTime * 60000;
+    return `${mapData.forecastName}_${forecastTime}`;
+  })();
+
+  // upload PNG to cloudinary as Promise
+  const uploadStream = async (map) => {
+    return new Promise((res, rej) => {
+      const theTransformStream = cloudinary.uploader.upload_stream(
+        {
+          public_id,
+          overwrite: true,
+          invalidate: true,
+          resource_type: 'image',
+        },
+        (err, result) => {
+          if (err) return rej(err);
+          res(result);
+        },
+      );
+      map.pack().pipe(theTransformStream);
+    });
+  };
+
+  // upload PNG to cloudinary and get response
+  const response = await uploadStream(map);
+
+  // update forecastMap in DB with url of PNG and mapData
+  await updateForecastMap(mapData, response.url, firstFile);
 };
 
+// convert grib files to png and upload to cloudinary
 const convertGrib2Png = async (windFiles, forecastConfigName) => {
   try {
-    for (const [_, filenames] of windFiles.entries()) {
+    for (const [index, filenames] of windFiles.entries()) {
       const forecastUandV = {};
       for (const filename of filenames) {
         const forecastJSON = await getForecastJSON(
@@ -171,7 +229,8 @@ const convertGrib2Png = async (windFiles, forecastConfigName) => {
           forecastUandV.forecastName = forecastJSON.forecastName;
         }
       }
-      await convertJSON2PNG(forecastUandV);
+      // convert JSON to PNG and upload to cloudinary and delete old files
+      await convertJSON2PNG(forecastUandV, index === 0);
     }
   } catch (err) {
     console.log(err);
