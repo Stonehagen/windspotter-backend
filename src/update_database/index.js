@@ -73,11 +73,11 @@ const convertAllGribToJSON = async (filesList, forecastConfigName) => {
     filesList[0][0],
     forecastConfigName,
   );
-  // await addEmptyForecastToSpots(forecastInfo);
-  // const convertPromises = filesList.map((files) =>
-  //   convertGribToJson(files, forecastInfo, forecastConfigName),
-  // );
-  // await Promise.all(convertPromises);
+  await addEmptyForecastToSpots(forecastInfo);
+  const convertPromises = filesList.map((files) =>
+    convertGribToJson(files, forecastInfo, forecastConfigName),
+  );
+  await Promise.all(convertPromises);
 
   // remap filelist to just have the u_10m and v_10m files
   let files = [];
@@ -100,19 +100,19 @@ const updateDatabase = async (forecastConfigName, wgrib2) => {
   dataValues = config[forecastConfigName].dataValues;
 
   console.log('delete old files');
-  // await deleteFiles(`./grib_data_${forecastConfigName}`);
+  await deleteFiles(`./grib_data_${forecastConfigName}`);
   console.log('deleted old files');
 
   const forecastInfo = await ForecastInfo.findOne({ name: forecastName });
 
   console.log('download files');
-  // const newForecastTime = await downloadFiles(
-  //   forecastInfo ? forecastInfo.time : new Date(0),
-  //   forecastConfigName,
-  // );
-  // if (!newForecastTime) {
-  //   return false;
-  // }
+  const newForecastTime = await downloadFiles(
+    forecastInfo ? forecastInfo.time : new Date(0),
+    forecastConfigName,
+  );
+  if (!newForecastTime) {
+    return false;
+  }
   console.log('download complete');
   console.log('update Database');
   const files = getFiles(`./grib_data_${forecastConfigName}`);
@@ -134,7 +134,7 @@ const updateDatabase = async (forecastConfigName, wgrib2) => {
   console.log('updated Database');
 
   console.log('delete files');
-  // await deleteFiles(`./grib_data_${forecastConfigName}`);
+  await deleteFiles(`./grib_data_${forecastConfigName}`);
   console.log('deleted files');
   console.log('Database is up to date');
   return true;

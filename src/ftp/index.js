@@ -107,9 +107,9 @@ const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
         (databaseTimestamp.getUTCHours() == prevForecastTimeHour &&
           databaseTimestamp.getUTCDate() == nextServerTimestamp.getUTCDate())
       ) {
-        // console.log('database is up to date');
-        // client.close();
-        // return null;
+        console.log('database is up to date');
+        client.close();
+        return null;
       }
       await client.cd(`${dict}/${prevForecastTimeHour}`);
       nextForecastTimeHour = prevForecastTimeHour;
