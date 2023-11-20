@@ -8,7 +8,7 @@ const {
   convertGribToJson,
   addEmptyForecastToSpots,
 } = require('../convert_grib/grib2json');
-const { convertGrib2Png } = require('../convert_grib/grib2png');
+const { convertGrib2Jpeg } = require('../convert_grib/grib2jpeg');
 const { convertWGrib2ToNetcdf } = require('../convert_grib/wgrib2');
 const {
   convertNetCDFToJson,
@@ -97,7 +97,7 @@ const convertAllGribToJSON = async (
   }
   const sortedFiles = sortFilesByTime(files, forecastConfigName);
   if (forecastMap) {
-    await convertGrib2Png(sortedFiles, forecastConfigName);
+    await convertGrib2Jpeg(sortedFiles, forecastConfigName);
   }
 };
 

@@ -3,9 +3,10 @@ dotenv.config({ path: __dirname + '/../.env' });
 const util = require('util');
 const mongoose = require('mongoose');
 const cloudinary = require('cloudinary').v2;
-const PNG = require('pngjs').PNG;
+const jpeg = require('jpeg-js');
 const grib2json = require('grib2json').default;
 const getJson = util.promisify(grib2json);
+const { Readable } = require("stream");
 
 const { getforecastHeader } = require('../../methods/forecastInfos');
 const { MapForecast, ForecastInfo } = require('../../models');
@@ -134,7 +135,7 @@ const updateForecastMap = async (mapData, url, firstFile) => {
 };
 
 // convert JSON to PNG and upload to cloudinary
-const convertJSON2PNG = async (forecastUandV, firstFile) => {
+const convertJSON2Jpeg = async (forecastUandV, firstFile) => {
   const u = forecastUandV['u_10m'];
   const v = forecastUandV['v_10m'];
 
@@ -159,12 +160,8 @@ const convertJSON2PNG = async (forecastUandV, firstFile) => {
   };
 
   // create new PNG with size of the forecast
-  const map = new PNG({
-    width: mapData.width,
-    height: mapData.height,
-    colorType: 2,
-    filterType: 4,
-  });
+  const jpegMap = Buffer.alloc(mapData.width * mapData.height * 4);
+
 
   // set rgba values for each pixel of the PNG depending on u and v values
   for (let y = 0; y < mapData.height; y++) {
@@ -174,16 +171,50 @@ const convertJSON2PNG = async (forecastUandV, firstFile) => {
       const uValue = u[k];
       const vValue = v[k];
       // scale values from 0-255 depending on min and max values
-      map.data[i + 0] = Math.round(
+      jpegMap[i + 0] = `0x${Math.round(
         ((uValue - mapData.uMin) / (mapData.uMax - mapData.uMin)) * 255,
-      );
-      map.data[i + 1] = Math.round(
+      ).toString(16)}`;
+      jpegMap[i + 1] = `0x${Math.round(
         ((vValue - mapData.vMin) / (mapData.vMax - mapData.vMin)) * 255,
-      );
-      map.data[i + 2] = 0;
-      map.data[i + 3] = 255;
+      ).toString(16)}`;
+      jpegMap[i + 2] = 0x00;
+      jpegMap[i + 3] = 0xff;
     }
   }
+
+  const rawImageData = {
+    data: jpegMap,
+    width: mapData.width,
+    height: mapData.height,
+  };
+
+  const jpegData = jpeg.encode(rawImageData, 100);
+
+  // const map = new PNG({
+  //   width: mapData.width,
+  //   height: mapData.height,
+  //   colorType: 2,
+  //   filterType: 4,
+  // });
+
+  // // set rgba values for each pixel of the PNG depending on u and v values
+  // for (let y = 0; y < mapData.height; y++) {
+  //   for (let x = 0; x < mapData.width; x++) {
+  //     const i = (y * mapData.width + x) * 4;
+  //     const k = y * mapData.width + x;
+  //     const uValue = u[k];
+  //     const vValue = v[k];
+  //     // scale values from 0-255 depending on min and max values
+  //     map.data[i + 0] = Math.round(
+  //       ((uValue - mapData.uMin) / (mapData.uMax - mapData.uMin)) * 255,
+  //     );
+  //     map.data[i + 1] = Math.round(
+  //       ((vValue - mapData.vMin) / (mapData.vMax - mapData.vMin)) * 255,
+  //     );
+  //     map.data[i + 2] = 0;
+  //     map.data[i + 3] = 255;
+  //   }
+  // }
 
   // create public_id for cloudinary (filename)
   const public_id = (() => {
@@ -208,19 +239,22 @@ const convertJSON2PNG = async (forecastUandV, firstFile) => {
           res(result);
         },
       );
-      map.pack().pipe(theTransformStream);
+      let str = Readable.from(map)
+      str.pipe(theTransformStream);
+      //map.pack().pipe(theTransformStream);
     });
   };
 
   // upload PNG to cloudinary and get response
-  const response = await uploadStream(map);
+  // const response = await uploadStream(map);
+  const response = await uploadStream(jpegData.data);
 
   // update forecastMap in DB with url of PNG and mapData
   await updateForecastMap(mapData, response.url, firstFile);
 };
 
 // convert grib files to png and upload to cloudinary
-const convertGrib2Png = async (windFiles, forecastConfigName) => {
+const convertGrib2Jpeg = async (windFiles, forecastConfigName) => {
   try {
     let firstFile = true;
     for (const [_, filenames] of windFiles.entries()) {
@@ -240,7 +274,7 @@ const convertGrib2Png = async (windFiles, forecastConfigName) => {
         }
       }
       // convert JSON to PNG and upload to cloudinary and delete old files
-      await convertJSON2PNG(forecastUandV, firstFile);
+      await convertJSON2Jpeg(forecastUandV, firstFile);
       firstFile = false;
     }
   } catch (err) {
@@ -251,5 +285,5 @@ const convertGrib2Png = async (windFiles, forecastConfigName) => {
 };
 
 module.exports = {
-  convertGrib2Png,
+  convertGrib2Jpeg,
 };
