@@ -62,6 +62,8 @@ const getForecastHeaderCWAM = (filename, forecastInfo, forecastConfigName) => {
       dy: forecastInfo.dy,
       refTime: forecastInfo.time,
       forecastTime,
+      nx: null,
+      ny: null,
     },
     filename,
     forecastConfigName,
