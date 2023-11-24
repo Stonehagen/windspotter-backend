@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const util = require('util');
 const grib2json = require('grib2json').default;
+const dotenv = require('dotenv');
+dotenv.config({ path: __dirname + '/../.env' });
 const { Spot, Forecast } = require('../../models');
 const { calculateDataValue } = require('../../methods/calculateValues');
 const { updateSpotForecast } = require('../../methods/updateDatabase');
@@ -15,8 +17,11 @@ const populateSpots = async (
   forecastConfigName,
   lastValues,
 ) => {
+  const scriptPath = process.env.ENV == 'DEV'
+    ? './src/convert_grib/grib2json/src/bin/grib2jsondev'
+    : './src/convert_grib/grib2json/src/bin/grib2json';
   const forecastJson = await getJson(filename, {
-    scriptPath: './src/convert_grib/grib2json/src/bin/grib2json',
+    scriptPath,
     names: true, // (default false): Return descriptive names too
     data: true, // (default false): Return data, not just headers
   });

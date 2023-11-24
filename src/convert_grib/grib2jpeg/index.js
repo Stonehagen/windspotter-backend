@@ -37,10 +37,14 @@ const getMin = (arr) => {
   return min;
 };
 
+const scriptPath = process.env.ENV == 'DEV'
+    ? './src/convert_grib/grib2json/src/bin/grib2jsondev'
+    : './src/convert_grib/grib2json/src/bin/grib2json';
+
 // get JSON from grib file
 const getForecastJSON = async (filename, forecastConfigName) => {
   const forecastJson = await getJson(filename, {
-    scriptPath: './src/convert_grib/grib2json/src/bin/grib2json',
+    scriptPath,
     names: true, // (default false): Return descriptive names too
     data: true, // (default false): Return data, not just headers
   });
