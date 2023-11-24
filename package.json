@@ -7,6 +7,7 @@
   "scripts": {
     "startIconD2": "node ./src/iconD2.js",
     "startIconEu": "node ./src/iconEu.js",
+    "startGfs": "node ./src/gfs.js",
     "startCwam": "node ./src/cwam.js",
     "devstart": "nodemon /src/index.js",
     "serverstart": "DEBUG=windspotter-backend:* npm run devstart",
@@ -25,6 +26,7 @@
     "jpeg-js": "^0.4.4",
     "mongoose": "^7.3.1",
     "netcdfjs": "^3.0.0",
+    "node-wget": "^0.4.3",
     "shelljs": "^0.8.5"
   },
   "devDependencies": {
