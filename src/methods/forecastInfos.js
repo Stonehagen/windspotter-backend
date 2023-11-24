@@ -159,6 +159,8 @@ const getForecastInfoFromNetCDF = async (filename, forecastConfigName) => {
   const la1 = roundTo(5, reader.getDataVariable(latName)[0]);
   const la2 = roundTo(5, reader.getDataVariable(latName)[laLength - 1]);
   const dy = roundTo(7, (la2 - la1) / (laLength - 1));
+  const nx = loLength;
+  const ny = laLength;
 
   const forecastInfo = await ForecastInfo.findOneAndUpdate(
     { name },
