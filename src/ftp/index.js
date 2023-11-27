@@ -1,5 +1,7 @@
 const fs = require('fs');
 const ftp = require('basic-ftp');
+const https = require('https');
+const { JSDOM } = require('jsdom');
 const decompress = require('decompress');
 const decompressBzip2 = require('decompress-bzip2');
 
@@ -58,6 +60,239 @@ const getServerTimestamp = (fileList) => {
   const fileTimestamps = getFileTimestamps(sortedFiles);
   // return latest Timestamp from folder
   return new Date(Math.max(...fileTimestamps));
+};
+
+const getDom = async (server) => {
+  return new Promise((resolve, reject) => {
+    https.get(server, (res) => {
+      const chunks = [];
+      res.on('data', (chunk) => {
+        chunks.push(chunk);
+      });
+      res.on('end', async () => {
+        const dom = new JSDOM(Buffer.concat(chunks).toString());
+        resolve(dom);
+      });
+    });
+  });
+};
+
+const getLinkList = async (server) => {
+  const dom = await getDom(server);
+  const folderList = dom.window.document.querySelectorAll('a');
+  const folderNames = [];
+  for (const folder of folderList) {
+    folderNames.push(folder.textContent);
+  }
+  return folderNames;
+};
+
+const getGrb2Files = (filesList) =>
+  filesList
+    .filter((filename) => filename.match(/^gfs/))
+    .filter((filename) => !filename.match(/\.inv$/));
+
+const getGfsRefTimes = (files, regex) => {
+  const refTimes = [
+    ...new Set(
+      files.map((file) => {
+        const match = file.match(regex);
+        return match[0];
+      }),
+    ),
+  ];
+  return refTimes;
+};
+
+const getListOfGfsFiles = async (databaseTimestamp, server, regexRefTime) => {
+  try {
+    // get a list of folders from the given ftp path
+    const monthLinkList = await getLinkList(server);
+    // filter out the unwanted folders and convert them to numbers qnd sort them
+    const monthList = monthLinkList
+      .filter((month) => month.match(/^[0-9]{6}/))
+      .map((month) => parseInt(month, 10))
+      .sort((a, b) => a - b);
+    // get the latest forecast folder name
+    const nextForecastMonth = monthList[monthList.length - 1];
+
+    // get a list of folders from the given ftp path
+    const dayLinkList = await getLinkList(`${server}${nextForecastMonth}/`);
+    // filter out the unwanted folders and convert them to numbers and sort them
+    const dayList = dayLinkList
+      .filter((day) => day.match(/^[0-9]{8}/))
+      .map((month) => parseInt(month, 10))
+      .sort((a, b) => a - b);
+    // get the latest forecast folder name
+    const nextForecastDay = dayList[dayList.length - 1];
+
+    // get a list of folders from the given ftp path
+    const filesList = await getLinkList(
+      `${server}${nextForecastMonth}/${nextForecastDay}/`,
+    );
+    // filter out the unwanted folders
+    const files = getGrb2Files(filesList);
+
+    // get the different refTimes from the files
+    const refTimes = getGfsRefTimes(files, regexRefTime);
+
+    // sort the files by refTime
+    const sortedFiles = refTimes.map((refTime) => {
+      const refTimeFiles = files.filter((file) => file.includes(refTime));
+      const count = refTimeFiles.length;
+      return {
+        refTime,
+        files: refTimeFiles,
+        count,
+      };
+    });
+
+    //check if there is more than one refTime ->
+    // if not get more refTimes from the day before
+    if (refTimes.length === 1) {
+      if (dayList.length > 1) {
+        const prevForecastDay = dayList[dayList.length - 2];
+        // get a list of folders from the given ftp path
+        const filesList = await getLinkList(
+          `${server}${nextForecastMonth}/${prevForecastDay}/`,
+        );
+        // filter out the unwanted folders
+        const files = getGrb2Files(filesList);
+
+        // get the different refTimes from the files
+        const refTimesPrev = getGfsRefTimes(files, regexRefTime);
+
+        // get the highest refTime from the day before
+        const refTimePrev = Math.max(
+          ...refTimesPrev.map((refTime) => parseInt(refTime, 10)),
+        );
+
+        // get the files from the last RefTime of the day before
+        const refTimePrevFiles = files.filter((file) =>
+          file.includes(refTimePrev),
+        );
+
+        // add the files from the day before to the sortedFiles
+        sortedFiles.unshift({
+          refTime: refTimePrev,
+          files: refTimePrevFiles,
+          count: refTimePrevFiles.length,
+        });
+      } else {
+        // get a list of folders from the given ftp path
+        const monthLinkList = await getLinkList(server);
+        // filter out the unwanted folders and convert them to numbers qnd sort them
+        const monthList = monthLinkList
+          .filter((month) => month.match(/^[0-9]{6}/))
+          .map((month) => parseInt(month, 10))
+          .sort((a, b) => a - b);
+        // get the latest forecast folder name
+        const prevForecastMonth = monthList[monthList.length - 2];
+
+        // get a list of folders from the given ftp path
+        const dayLinkList = await getLinkList(`${server}${prevForecastMonth}/`);
+        // filter out the unwanted folders and convert them to numbers and sort them
+        const dayList = dayLinkList
+          .filter((day) => day.match(/^[0-9]{8}/))
+          .map((month) => parseInt(month, 10))
+          .sort((a, b) => a - b);
+        // get the latest forecast folder name
+        const prevForecastDay = dayList[dayList.length - 1];
+
+        // get a list of folders from the given ftp path
+        const filesList = await getLinkList(
+          `${server}${prevForecastMonth}/${prevForecastDay}/`,
+        );
+        // filter out the unwanted folders
+        const files = getGrb2Files(filesList);
+
+        // get the different refTimes from the files
+        const refTimesPrev = getGfsRefTimes(files, regexRefTime);
+
+        // get the highest refTime from the day before
+        const refTimePrev = Math.max(
+          ...refTimesPrev.map((refTime) => parseInt(refTime, 10)),
+        );
+
+        // get the files from the last RefTime of the day before
+        const refTimePrevFiles = files.filter((file) =>
+          file.includes(refTimePrev),
+        );
+
+        // add the files from the day before to the sortedFiles
+        sortedFiles.unshift({
+          refTime: refTimePrev,
+          files: refTimePrevFiles,
+          count: refTimePrevFiles.length,
+        });
+      }
+    }
+
+    // get the forecastTime with the highest count
+    const latestRefTime = sortedFiles.reduce((prev, current) =>
+      prev.count > current.count ? prev : current,
+    );
+
+    // generate the list of urls
+    const urlList = latestRefTime.files.map(
+      (file) => `${server}${nextForecastMonth}/${nextForecastDay}/${file}`,
+    );
+
+    // get a timestamp from the latest RefTime
+    const dateRegex = /(?<=gfs_[0-9]_)[0-9]+(?=_[0-9]+_[0-9]+\.grb2)/;
+    const dateArray = [...latestRefTime.files[0].match(dateRegex)[0]];
+    const year = dateArray.slice(0, 4).join('');
+    const month = dateArray.slice(4, 6).join('');
+    const day = dateArray.slice(6, 8).join('');
+    const hour = latestRefTime.refTime.slice(0, 2);
+    const timestamp = new Date(`${year}-${month}-${day}T${hour}:00:00Z`);
+
+    // check if the files are older than the data in our database
+    if (timestamp <= databaseTimestamp) {
+      console.log('database is up to date');
+      return null;
+    }
+
+    return urlList;
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+};
+
+const downloadFilesGFS = async (databaseTimestamp, forecastConfigName) => {
+  const server = config[forecastConfigName].server;
+  const regexRefTime = config[forecastConfigName].regexRefTimeValue;
+
+  //get the most recent GFS forecast from the server
+  const latestGfsFiles = await getListOfGfsFiles(
+    databaseTimestamp,
+    server,
+    regexRefTime,
+  );
+
+  if (!latestGfsFiles) {
+    return null;
+  }
+
+  //download files at the same time
+  const promises = latestGfsFiles.map((file) => {
+    return new Promise((resolve, reject) => {
+      const fileName = file.split('/').pop();
+      const fileStream = fs.createWriteStream(
+        `./grib_data_${forecastConfigName}/${fileName}`,
+      );
+      https.get(file, (response) => {
+        response.pipe(fileStream);
+        fileStream.on('finish', () => {
+          fileStream.close(resolve(true));
+        });
+      });
+    });
+  });
+  await Promise.all(promises);
+
+  return true;
 };
 
 const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
@@ -145,7 +380,6 @@ const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
       }
     }
     client.close();
-    //convert nextForecastTimeHour to Date
     return nextForecastTimeHour;
   } catch (err) {
     console.log(err);
@@ -155,4 +389,5 @@ const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
 
 module.exports = {
   downloadFiles,
+  downloadFilesGFS,
 };

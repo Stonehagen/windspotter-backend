@@ -24,10 +24,10 @@
     "dotenv": "^16.3.1",
     "grib2json": "^1.0.2",
     "jpeg-js": "^0.4.4",
+    "jsdom": "^22.1.0",
     "mongoose": "^7.3.1",
     "netcdfjs": "^3.0.0",
-    "shelljs": "^0.8.5",
-    "wget-improved": "^3.4.0"
+    "shelljs": "^0.8.5"
   },
   "devDependencies": {
     "jest": "^29.5.0",

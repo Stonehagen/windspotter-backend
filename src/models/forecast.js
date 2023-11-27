@@ -14,6 +14,12 @@ const ForecastSchema = new Schema({
   mwd: { type: Object },
   swh: { type: Object },
   tm10: { type: Object },
+  tmp: { type: Object },
+  vgrd: { type: Object },
+  ugrd: { type: Object },
+  tcdc: { type: Object },
+  pers: { type: Object },
+  crain: { type: Object },
 });
 
 module.exports = mongoose.model('Forecast', ForecastSchema);

@@ -11,5 +11,5 @@ const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'mongo connection error'));
 
 const wgrib2 = false;
-const forecastMap = true;
+const forecastMap = false;
 updateDatabase('gfs', wgrib2, forecastMap).then((res) => db.close());

@@ -3,13 +3,16 @@
 /* eslint-disable no-console */
 const fs = require('fs');
 const config = require('../config');
-const { downloadFiles } = require('../ftp');
+const { downloadFiles, downloadFilesGFS } = require('../ftp');
 const {
   convertGribToJson,
   addEmptyForecastToSpots,
 } = require('../convert_grib/grib2json');
 const { convertGrib2Jpeg } = require('../convert_grib/grib2jpeg');
-const { convertWGrib2ToNetcdf } = require('../convert_grib/wgrib2');
+const {
+  convertWGrib2ToNetcdf,
+  splitWGrib2ToNetcdf,
+} = require('../convert_grib/wgrib2');
 const {
   convertNetCDFToJson,
   addEmptyForecastToSpotsNetCDF,
@@ -101,6 +104,16 @@ const convertAllGribToJSON = async (
   }
 };
 
+const convertAllGfsToJSON = async (
+  filesList,
+  forecastConfigName,
+  forecastMap,
+) => {
+  const forecastInfo = await getForecastInfo(filesList[0], forecastConfigName);
+  await addEmptyForecastToSpotsNetCDF(forecastInfo);
+  await convertNetCDFToJson(filesList, forecastInfo, forecastConfigName);
+};
+
 const updateDatabase = async (forecastConfigName, wgrib2, forecastMap) => {
   forecastName = config[forecastConfigName].forecastName;
   dataValues = config[forecastConfigName].dataValues;
@@ -111,32 +124,49 @@ const updateDatabase = async (forecastConfigName, wgrib2, forecastMap) => {
 
   const forecastInfo = await ForecastInfo.findOne({ name: forecastName });
 
+  let forecastTime;
   console.log('download files');
-  const newForecastTime = await downloadFiles(
-    forecastInfo ? forecastInfo.time : new Date(0),
-    forecastConfigName,
-  );
+  if (forecastConfigName === 'gfs') {
+    newForecastTime = await downloadFilesGFS(
+      forecastInfo ? forecastInfo.time : new Date(0),
+      forecastConfigName,
+    );
+  } else {
+    newForecastTime = await downloadFiles(
+      forecastInfo ? forecastInfo.time : new Date(0),
+      forecastConfigName,
+    );
+  }
+
   if (!newForecastTime) {
     return false;
   }
   console.log('download complete');
   console.log('update Database');
   const files = getFiles(`./grib_data_${forecastConfigName}`);
-  const sortedFiles = dataValues.map((value) =>
-    sortFilesByValue(files, value, forecastConfigName),
-  );
-  if (wgrib2) {
-    console.log('wgrib2');
-    await convertAllWGrib2(sortedFiles, forecastConfigName);
+  if (forecastConfigName === 'gfs') {
+    console.log('gfs2json');
+    await splitWGrib2ToNetcdf(files, forecastConfigName);
     const ncFiles = getFiles(`./grib_data_${forecastConfigName}`);
-    const sortedNcFiles = dataValues.map((value) =>
-      sortFilesByValue(ncFiles, value, forecastConfigName),
-    );
-    await convertAllNetCDFToJSON(sortedNcFiles, forecastConfigName);
+    await convertAllGfsToJSON(ncFiles, forecastConfigName);
   } else {
-    console.log('grib2json');
-    await convertAllGribToJSON(sortedFiles, forecastConfigName, forecastMap);
+    const sortedFiles = dataValues.map((value) =>
+      sortFilesByValue(files, value, forecastConfigName),
+    );
+    if (wgrib2) {
+      console.log('wgrib2');
+      await convertAllWGrib2(sortedFiles, forecastConfigName);
+      const ncFiles = getFiles(`./grib_data_${forecastConfigName}`);
+      const sortedNcFiles = dataValues.map((value) =>
+        sortFilesByValue(ncFiles, value, forecastConfigName),
+      );
+      await convertAllNetCDFToJSON(sortedNcFiles, forecastConfigName);
+    } else {
+      console.log('grib2json');
+      await convertAllGribToJSON(sortedFiles, forecastConfigName, forecastMap);
+    }
   }
+
   console.log('updated Database');
 
   console.log('delete files');

@@ -126,7 +126,7 @@ const convertGribToJson = async (
       dataValues: [],
       forecastTime: null,
     };
-    for (const [index, filename] of filenames.entries()) {
+    for (const [_, filename] of filenames.entries()) {
       lastValues = await populateSpots(
         `./grib_data_${forecastConfigName}/${filename}`,
         spots,

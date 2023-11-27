@@ -4,7 +4,10 @@ const { NetCDFReader } = require('netcdfjs');
 const { Forecast, Spot } = require('../../models');
 const { calculateDataValue } = require('../../methods/calculateValues');
 const { updateSpotForecast } = require('../../methods/updateDatabase');
-const { getForecastHeaderCWAM } = require('../../methods/forecastInfos');
+const {
+  getForecastHeaderCWAM,
+  getForecastHeaderGFS,
+} = require('../../methods/forecastInfos');
 
 const populateSpots = async (
   filename,
@@ -13,11 +16,10 @@ const populateSpots = async (
   forecastConfigName,
 ) => {
   // if more than only cwam - add a contition to check for right headerGenerator
-  const forecastHeader = getForecastHeaderCWAM(
-    filename,
-    forecastInfo,
-    forecastConfigName,
-  );
+  const forecastHeader =
+    forecastConfigName === 'cwam'
+      ? getForecastHeaderCWAM(filename, forecastInfo, forecastConfigName)
+      : getForecastHeaderGFS(filename, forecastInfo, forecastConfigName);
 
   const NcData = readFileSync(`./grib_data_${forecastConfigName}/${filename}`);
   const reader = new NetCDFReader(NcData);
