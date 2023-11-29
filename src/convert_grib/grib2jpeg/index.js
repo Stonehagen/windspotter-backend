@@ -6,7 +6,7 @@ const cloudinary = require('cloudinary').v2;
 const jpeg = require('jpeg-js');
 const grib2json = require('grib2json').default;
 const getJson = util.promisify(grib2json);
-const { Readable } = require("stream");
+const { Readable } = require('stream');
 
 const { getforecastHeader } = require('../../methods/forecastInfos');
 const { MapForecast, ForecastInfo } = require('../../models');
@@ -37,7 +37,8 @@ const getMin = (arr) => {
   return min;
 };
 
-const scriptPath = process.env.ENV == 'DEV'
+const scriptPath =
+  process.env.ENV == 'DEV'
     ? './src/convert_grib/grib2json/src/bin/grib2jsondev'
     : './src/convert_grib/grib2json/src/bin/grib2json';
 
@@ -108,13 +109,11 @@ const updateForecastMap = async (mapData, url, firstFile) => {
         const dateFromKey = new Date(key);
         if (dateFromKey.getTime() < twoDaysBefore.getTime()) {
           // delete file from cloudanary
-          const public_id = mapForecast.forecastMaps[key].url.split('/').pop();
-          await cloudinary.api
-            .delete_resources([public_id], {
-              type: 'upload',
-              resource_type: 'image',
-            })
-            .then(console.log);
+          const public_id = mapForecast.forecastMaps[key].url
+            .split('/')
+            .pop()
+            .split('.')[0];
+          await cloudinary.api.delete_resources([public_id]).then(console.log);
 
           // delete forecastMap from DB
           delete mapForecast.forecastMaps[key];
@@ -166,7 +165,6 @@ const convertJSON2Jpeg = async (forecastUandV, firstFile) => {
   // create new PNG with size of the forecast
   const jpegMap = Buffer.alloc(mapData.width * mapData.height * 4);
 
-
   // set rgba values for each pixel of the PNG depending on u and v values
   for (let y = 0; y < mapData.height; y++) {
     for (let x = 0; x < mapData.width; x++) {
@@ -192,7 +190,7 @@ const convertJSON2Jpeg = async (forecastUandV, firstFile) => {
     height: mapData.height,
   };
 
-  const jpegData = jpeg.encode(rawImageData, 100);
+  const jpegData = jpeg.encode(rawImageData, 50);
 
   // create public_id for cloudinary (filename)
   const public_id = (() => {
@@ -217,7 +215,7 @@ const convertJSON2Jpeg = async (forecastUandV, firstFile) => {
           res(result);
         },
       );
-      let str = Readable.from(map)
+      let str = Readable.from(map);
       str.pipe(theTransformStream);
       //map.pack().pipe(theTransformStream);
     });
