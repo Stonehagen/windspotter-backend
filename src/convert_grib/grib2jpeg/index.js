@@ -190,7 +190,7 @@ const convertJSON2Jpeg = async (forecastUandV, firstFile) => {
     height: mapData.height,
   };
 
-  const jpegData = jpeg.encode(rawImageData, 50);
+  const jpegData = jpeg.encode(rawImageData, 80);
 
   // create public_id for cloudinary (filename)
   const public_id = (() => {
