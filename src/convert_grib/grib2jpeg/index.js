@@ -111,7 +111,6 @@ const updateForecastMap = async (mapData, url, firstFile) => {
           const public_id = mapForecast.forecastMaps[key].url
             .split('/')
             .pop()
-            .split('.')[0];
           
           try {
             await imageKit.deleteFile(public_id);
@@ -208,6 +207,13 @@ const convertJSON2Jpeg = async (forecastUandV, firstFile) => {
   })();
 
   // upload jpeg to imageKit
+  // first delete old file
+  try {
+    await imageKit.deleteFile(`${public_id}.jpg`);
+  } catch (err) {
+    // console.log(err);
+  }
+
   const response = await imageKit.upload({
     file: jpegData.data,
     fileName: `${public_id}.jpg`,
