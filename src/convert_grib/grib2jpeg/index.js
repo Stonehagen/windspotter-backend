@@ -181,7 +181,7 @@ const convertJSON2Jpeg = async (forecastUandV, firstFile) => {
       jpegMap[i + 2] = 0x00;
       jpegMap[i + 3] = 0xff;
       if (uValue == NaN && vValue == NaN) {
-        jpegMap[i + 3] = 0xff;
+        jpegMap[i + 2] = 0xff;
       }
     }
   }
