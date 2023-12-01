@@ -2,19 +2,18 @@ const dotenv = require('dotenv');
 dotenv.config({ path: __dirname + '/../.env' });
 const util = require('util');
 const mongoose = require('mongoose');
-const cloudinary = require('cloudinary').v2;
+const ImageKit = require('imagekit');
 const jpeg = require('jpeg-js');
 const grib2json = require('grib2json').default;
 const getJson = util.promisify(grib2json);
-const { Readable } = require('stream');
 
 const { getforecastHeader } = require('../../methods/forecastInfos');
 const { MapForecast, ForecastInfo } = require('../../models');
 
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.CLOUD_API_KEY,
-  api_secret: process.env.CLOUD_API_SECRET,
+const imageKit = new ImageKit({
+  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
 });
 
 // get max value of array
@@ -108,12 +107,12 @@ const updateForecastMap = async (mapData, url, firstFile) => {
       for (const key in mapForecast.forecastMaps) {
         const dateFromKey = new Date(key);
         if (dateFromKey.getTime() < twoDaysBefore.getTime()) {
-          // delete file from cloudanary
+          // delete file from imageKit
           const public_id = mapForecast.forecastMaps[key].url
             .split('/')
             .pop()
             .split('.')[0];
-          await cloudinary.api.delete_resources([public_id]).then(console.log);
+          //await imageKit.deleteFile(public_id);
 
           // delete forecastMap from DB
           delete mapForecast.forecastMaps[key];
@@ -192,7 +191,7 @@ const convertJSON2Jpeg = async (forecastUandV, firstFile) => {
 
   const jpegData = jpeg.encode(rawImageData, 80);
 
-  // create public_id for cloudinary (filename)
+  // create public_id for cdn (filename)
   const public_id = (() => {
     const forecastTime =
       // add forecastTime in minutes to refTime to get timestamp of forecast
@@ -200,32 +199,16 @@ const convertJSON2Jpeg = async (forecastUandV, firstFile) => {
     return `${mapData.forecastName}_${forecastTime}`;
   })();
 
-  // upload PNG to cloudinary as Promise
-  const uploadStream = async (map) => {
-    return new Promise((res, rej) => {
-      const theTransformStream = cloudinary.uploader.upload_stream(
-        {
-          public_id,
-          overwrite: true,
-          invalidate: true,
-          resource_type: 'image',
-        },
-        (err, result) => {
-          if (err) return rej(err);
-          res(result);
-        },
-      );
-      let str = Readable.from(map);
-      str.pipe(theTransformStream);
-      //map.pack().pipe(theTransformStream);
-    });
-  };
+  // upload jpeg to imageKit
+  const response = await imageKit.upload({
+    file: jpegData.data,
+    fileName: `${public_id}.jpg`,
+    useUniqueFileName: false,
+    overwriteFile: true,
+    // expire: 60,
+  });
 
-  // upload PNG to cloudinary and get response
-  // const response = await uploadStream(map);
-  const response = await uploadStream(jpegData.data);
-
-  // update forecastMap in DB with url of PNG and mapData
+  // update forecastMap in DB with url of JPEG and mapData
   await updateForecastMap(mapData, response.url, firstFile);
 };
 
