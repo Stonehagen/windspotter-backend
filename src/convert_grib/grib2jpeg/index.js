@@ -112,7 +112,12 @@ const updateForecastMap = async (mapData, url, firstFile) => {
             .split('/')
             .pop()
             .split('.')[0];
-          //await imageKit.deleteFile(public_id);
+          
+          try {
+            await imageKit.deleteFile(public_id);
+          } catch (err) {
+            // console.log(err);
+          }
 
           // delete forecastMap from DB
           delete mapForecast.forecastMaps[key];
