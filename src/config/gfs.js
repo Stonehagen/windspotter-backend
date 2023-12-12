@@ -10,11 +10,14 @@ const gfs = {
   ],
   serverDataTimeDelay: 5 * 60 * 1000,
   server:
-    'https://www.ncei.noaa.gov/data/global-forecast-system/access/grid-004-0.5-degree/forecast/',
+    'https://www.ncei.noaa.gov/data/global-forecast-system/access/grid-003-1.0-degree/forecast/',
   regexRefTimeValue: /(?<=gfs_[0-9]_[0-9]+_)[0-9]+(?=_[0-9]+\.grb2)/,
-  regexRefTimeDateNc: /(?<=gfs_[0-9]_)[0-9]+(?=_[0-9]+_[0-9]+_[a-zA-Z0-9]+\.nc)/,
-  regexRefTimeHoursNc: /(?<=gfs_[0-9]_[0-9]+_)[0-9]+(?=_[0-9]+_[a-zA-Z0-9]+\.nc)/,
-  regexRefTimeMinutesNc: /(?<=gfs_[0-9]_[0-9]+_[0-9]+_)[0-9]+(?=_[a-zA-Z0-9]+\.nc)/,
+  regexRefTimeDateNc:
+    /(?<=gfs_[0-9]_)[0-9]+(?=_[0-9]+_[0-9]+_[a-zA-Z0-9]+\.nc)/,
+  regexRefTimeHoursNc:
+    /(?<=gfs_[0-9]_[0-9]+_)[0-9]+(?=_[0-9]+_[a-zA-Z0-9]+\.nc)/,
+  regexRefTimeMinutesNc:
+    /(?<=gfs_[0-9]_[0-9]+_[0-9]+_)[0-9]+(?=_[a-zA-Z0-9]+\.nc)/,
   regexNameValue: /(?<=gfs_[0-9]_[0-9]+_[0-9]+_[0-9]+_).+(?=\.nc)/,
 };
 
