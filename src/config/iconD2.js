@@ -1,7 +1,6 @@
 const iconD2 = {
   forecastName: 'icon-d2',
-  //dataValues: ['t_2m', 'v_10m', 'u_10m', 'vmax_10m', 'clct_mod', 'rain_gsp'],
-  dataValues: ['v_10m', 'u_10m'],
+  dataValues: ['t_2m', 'v_10m', 'u_10m', 'vmax_10m', 'clct_mod', 'rain_gsp'],
   fCModel: 'regular-lat-lon_',
   fCHeight: '_2d_',
   serverDataTimeDelay: 5 * 60 * 1000,
