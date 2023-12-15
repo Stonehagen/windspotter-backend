@@ -3,7 +3,11 @@
 /* eslint-disable no-console */
 const fs = require('fs');
 const config = require('../config');
-const { downloadFiles, downloadFilesGFS } = require('../ftp');
+const {
+  downloadFiles,
+  downloadFilesGFS,
+  downloadFilesGfsAWS,
+} = require('../ftp');
 const {
   convertGribToJson,
   addEmptyForecastToSpots,
@@ -124,10 +128,10 @@ const updateDatabase = async (forecastConfigName, wgrib2, forecastMap) => {
 
   const forecastInfo = await ForecastInfo.findOne({ name: forecastName });
 
-  let forecastTime;
+  let newForecastTime;
   console.log('download files');
-  if (forecastConfigName === 'gfs') {
-    newForecastTime = await downloadFilesGFS(
+  if (forecastConfigName === 'gfsAWS') {
+    newForecastTime = await downloadFilesGfsAWS(
       forecastInfo ? forecastInfo.time : new Date(0),
       forecastConfigName,
     );
@@ -144,8 +148,8 @@ const updateDatabase = async (forecastConfigName, wgrib2, forecastMap) => {
   console.log('download complete');
   console.log('update Database');
   const files = getFiles(`./grib_data_${forecastConfigName}`);
-  if (forecastConfigName === 'gfs') {
-    console.log('gfs2json');
+  if (forecastConfigName === 'gfsAWS') {
+    console.log('gfsAWS to json');
     await splitWGrib2ToNetcdf(files, forecastConfigName);
     const ncFiles = getFiles(`./grib_data_${forecastConfigName}`);
     await convertAllGfsToJSON(ncFiles, forecastConfigName);
@@ -162,7 +166,7 @@ const updateDatabase = async (forecastConfigName, wgrib2, forecastMap) => {
       );
       await convertAllNetCDFToJSON(sortedNcFiles, forecastConfigName);
     } else {
-      console.log('grib2json');
+      console.log('grib to json');
       await convertAllGribToJSON(sortedFiles, forecastConfigName, forecastMap);
     }
   }

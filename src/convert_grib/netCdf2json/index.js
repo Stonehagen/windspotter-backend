@@ -14,6 +14,7 @@ const populateSpots = async (
   spots,
   forecastInfo,
   forecastConfigName,
+  lastValues,
 ) => {
   // if more than only cwam - add a contition to check for right headerGenerator
   const forecastHeader =
@@ -33,6 +34,29 @@ const populateSpots = async (
 
   // Wait for all dataValue promises to resolve
   const dataValues = await Promise.all(dataValuePromises);
+
+  const rawDataValues = {
+    dataValues: [...dataValues],
+    forecastTime: forecastHeader.forecastTime,
+  };
+
+  // convert accumulated rain to rain per hour
+  // If the forecastHeader.forecastType is 'apcp'
+  // and the lastValues array is not empty, calculate the difference
+  // between the current and the last forecast and divide it by the
+  // difference between the current and the last forecast time
+  if (forecastHeader.forecastType === 'apcp') {
+    if (lastValues.dataValues.length > 0) {
+      for (const [index, value] of dataValues.entries()) {
+        if (value !== null) {
+          dataValues[index] =
+            (value - lastValues.dataValues[index]) /
+            ((forecastHeader.forecastTime - lastValues.forecastTime) / 60);
+        }
+      }
+    }
+  }
+
   // Update spot forecasts with calculated data values
   for (const [index, spot] of spots.entries()) {
     if (dataValues[index] !== null) {
@@ -44,6 +68,7 @@ const populateSpots = async (
       );
     }
   }
+  return rawDataValues;
 };
 
 const addEmptyForecastToSpotsNetCDF = async (forecastInfo) => {
@@ -91,8 +116,18 @@ const convertNetCDFToJson = async (
     return false;
   }
   try {
+    let lastValues = {
+      dataValues: [],
+      forecastTime: null,
+    };
     for (const filename of filenames) {
-      await populateSpots(filename, spots, forecastInfo, forecastConfigName);
+      lastValues = await populateSpots(
+        filename,
+        spots,
+        forecastInfo,
+        forecastConfigName,
+        lastValues,
+      );
     }
     for (const spot of spots) {
       await spot.save();

@@ -7,7 +7,7 @@
   "scripts": {
     "startIconD2": "node ./src/iconD2.js",
     "startIconEu": "node ./src/iconEu.js",
-    "startGfs": "node ./src/gfs.js",
+    "startGfs025": "node ./src/gfs025.js",
     "startCwam": "node ./src/cwam.js",
     "devstart": "nodemon /src/index.js",
     "serverstart": "DEBUG=windspotter-backend:* npm run devstart",
@@ -17,6 +17,7 @@
   "author": "Tobias Steinhagen",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.472.0",
     "basic-ftp": "^5.0.3",
     "decompress": "^4.2.1",
     "decompress-bzip2": "^4.0.0",

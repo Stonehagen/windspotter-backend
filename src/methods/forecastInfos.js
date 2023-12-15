@@ -137,7 +137,11 @@ const getforecastHeader = (
 };
 
 const getForecastInfo = async (filename, forecastConfigName) => {
-  if (forecastConfigName === 'cwam' || forecastConfigName === 'gfs') {
+  if (
+    forecastConfigName === 'cwam' ||
+    forecastConfigName === 'gfs' ||
+    forecastConfigName === 'gfsAWS'
+  ) {
     return getForecastInfoFromNetCDF(filename, forecastConfigName);
   } else {
     return getForecastInfoFromGrib(filename, forecastConfigName);

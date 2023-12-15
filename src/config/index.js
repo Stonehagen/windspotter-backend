@@ -1,11 +1,11 @@
 const { iconD2 } = require('./iconD2');
 const { iconEu } = require('./iconEu');
 const { cwam } = require('./cwam');
-const { gfs } = require('./gfs');
+const { gfsAWS } = require('./gfsAWS')
 
 module.exports = {
   iconD2,
   cwam,
   iconEu,
-  gfs,
+  gfsAWS
 };
