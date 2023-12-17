@@ -35,23 +35,25 @@ const populateSpots = async (
   // Wait for all dataValue promises to resolve
   const dataValues = await Promise.all(dataValuePromises);
 
-  const rawDataValues = {
-    dataValues: [...dataValues],
-    forecastTime: forecastHeader.forecastTime,
-  };
-
   // convert accumulated rain to rain per hour
   // If the forecastHeader.forecastType is 'apcp'
   // and the lastValues array is not empty, calculate the difference
   // between the current and the last forecast and divide it by the
   // difference between the current and the last forecast time
+
+  let rawDataValues = null;
   if (forecastHeader.forecastType === 'apcp') {
+    rawDataValues = {
+      dataValues: [...dataValues],
+      forecastTime: forecastHeader.forecastTime,
+    };
     if (lastValues.dataValues.length > 0) {
       for (const [index, value] of dataValues.entries()) {
-        if (value !== null) {
-          dataValues[index] =
+        if (value !== null && value !== 0) {
+          const newValue =
             (value - lastValues.dataValues[index]) /
             ((forecastHeader.forecastTime - lastValues.forecastTime) / 60);
+          dataValues[index] = newValue >= 0 ? newValue : 0;
         }
       }
     }
@@ -68,7 +70,7 @@ const populateSpots = async (
       );
     }
   }
-  return rawDataValues;
+  return rawDataValues ? rawDataValues : lastValues;
 };
 
 const addEmptyForecastToSpotsNetCDF = async (forecastInfo) => {
