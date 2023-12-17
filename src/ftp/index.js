@@ -171,16 +171,12 @@ const downloadFilesGfsAWS = async (databaseTimestamp, forecastConfigName) => {
     }
   }
   if (files === null) return null;
-
-  files = files.slice(0, 1);
-
   // download the files in bundles of 5 files parralel and log the progress to the console
   const filesList = [];
   for (let i = 0; i < files.length; i += 5) {
     filesList.push(files.slice(i, i + 5));
   }
   const date = hourPrefix.match(/(?<=gfs\.)[0-9]{8}/)[0];
-  console.log(date)
   for (const files of filesList) {
     const downloadPromises = [];
     for (let i = 0; i < files.length; i += 5) {
