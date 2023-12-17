@@ -171,34 +171,42 @@ const downloadFilesGfsAWS = async (databaseTimestamp, forecastConfigName) => {
     }
   }
   if (files === null) return null;
-  // get a timestamp from the files
 
-  // download files at the same time
-  const promises = files.map((file) => {
-    return new Promise((resolve, reject) => {
-      const firstdir = file.split('/')[0].replace('gfs.', '');
-      const fileName = `${firstdir}_${file.split('/').pop()}.grb2`;
-      const fileStream = fs.createWriteStream(
-        `./grib_data_${forecastConfigName}/${fileName}`,
-      );
-      const command = new GetObjectCommand({
-        Bucket: config[forecastConfigName].bucket,
-        Key: file,
-      });
-      client
-        .send(command)
-        .then((response) => {
-          response.Body.pipe(fileStream);
-          fileStream.on('finish', () => {
-            fileStream.close(resolve(true));
+  files = files.slice(0, 1);
+
+  // download the files in bundles of 5 files parralel and log the progress to the console
+  const filesList = [];
+  for (let i = 0; i < files.length; i += 5) {
+    filesList.push(files.slice(i, i + 5));
+  }
+  const date = hourPrefix.match(/(?<=gfs\.)[0-9]{8}/)[0];
+  console.log(date)
+  for (const files of filesList) {
+    const downloadPromises = [];
+    for (let i = 0; i < files.length; i += 5) {
+      const filesBundle = files.slice(i, i + 5);
+      const downloadPromise = Promise.all(
+        filesBundle.map((file) => {
+          const command = new GetObjectCommand({
+            Bucket: config[forecastConfigName].bucket,
+            Key: file,
           });
-        })
-        .catch((err) => console.log(err));
-    });
-  });
-  await Promise.all(promises);
-  return true;
-};
+          const filename = file.split('/').pop();
+          return client.send(command).then((data) => {
+            return fs.promises.writeFile(
+              `./grib_data_${forecastConfigName}/${date}_${filename}.grb2`,
+              data.Body,
+            );
+          });
+        }),
+      );
+      downloadPromises.push(downloadPromise);
+    }
+    await Promise.all(downloadPromises);
+  }
+
+  return hours;
+}
 
 const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
   const server = config[forecastConfigName].server;
