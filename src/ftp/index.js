@@ -140,6 +140,7 @@ const downloadFilesGfsAWS = async (databaseTimestamp, forecastConfigName) => {
     client,
     forecastConfigName,
   );
+  let forecastHour = hours;
   let endPrefix = `${hourPrefix}/atmos/`;
   let files = await getAWSForecastKeys(
     client,
@@ -158,6 +159,7 @@ const downloadFilesGfsAWS = async (databaseTimestamp, forecastConfigName) => {
         endPrefix,
         newhour,
       );
+      forecastHour = newhour;
     } else {
       const newhour = '18';
       const newPrefix = hourPrefixBefore.replace(hours, newhour);
@@ -168,9 +170,31 @@ const downloadFilesGfsAWS = async (databaseTimestamp, forecastConfigName) => {
         endPrefix,
         newhour,
       );
+      forecastHour = newhour;
     }
   }
   if (files === null) return null;
+  forecastHour = '06';
+  const forecastDate = hourPrefix.match(/(?<=gfs\.)[0-9]{8}/)[0];
+  // get timestamp from forecastDate and hour
+  const dateSting = `${forecastDate.slice(0, 4)}-${forecastDate.slice(
+    4,
+    6,
+  )}-${forecastDate.slice(6, 8)}T`;
+  const forecastTimestamp = new Date(`${dateSting}${forecastHour}:00:00.000Z`);
+
+  //check if timestemp is newer than databaseTimestamp
+  console.log(databaseTimestamp);
+  console.log(forecastTimestamp);
+  if (
+    forecastTimestamp < databaseTimestamp ||
+    (databaseTimestamp.getUTCHours() == forecastHour &&
+      databaseTimestamp.getUTCDate() == forecastTimestamp.getUTCDate())
+  ) {
+    console.log('database is up to date');
+    return null;
+  }
+
   // download the files in bundles of 5 files parralel and log the progress to the console
   const filesList = [];
   for (let i = 0; i < files.length; i += 5) {
@@ -202,7 +226,7 @@ const downloadFilesGfsAWS = async (databaseTimestamp, forecastConfigName) => {
   }
 
   return hours;
-}
+};
 
 const downloadFiles = async (databaseTimestamp, forecastConfigName) => {
   const server = config[forecastConfigName].server;
