@@ -174,7 +174,7 @@ const downloadFilesGfsAWS = async (databaseTimestamp, forecastConfigName) => {
     }
   }
   if (files === null) return null;
-  forecastHour = '06';
+
   const forecastDate = hourPrefix.match(/(?<=gfs\.)[0-9]{8}/)[0];
   // get timestamp from forecastDate and hour
   const dateSting = `${forecastDate.slice(0, 4)}-${forecastDate.slice(
@@ -184,8 +184,6 @@ const downloadFilesGfsAWS = async (databaseTimestamp, forecastConfigName) => {
   const forecastTimestamp = new Date(`${dateSting}${forecastHour}:00:00.000Z`);
 
   //check if timestemp is newer than databaseTimestamp
-  console.log(databaseTimestamp);
-  console.log(forecastTimestamp);
   if (
     forecastTimestamp < databaseTimestamp ||
     (databaseTimestamp.getUTCHours() == forecastHour &&
