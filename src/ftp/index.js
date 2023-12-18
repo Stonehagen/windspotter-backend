@@ -151,7 +151,7 @@ const downloadFilesGfsAWS = async (databaseTimestamp, forecastConfigName) => {
   if (files === null) {
     if (hours != '00') {
       const newhour = (+hours - 6).toString().padStart(2, '0');
-      const newPrefix = hourPrefix.replace(hours, newhour);
+      const newPrefix = hourPrefix.replace(`/${hours}`, `/${newhour}`);
       endPrefix = `${newPrefix}/atmos/`;
       files = await getAWSForecastKeys(
         client,
@@ -162,7 +162,7 @@ const downloadFilesGfsAWS = async (databaseTimestamp, forecastConfigName) => {
       forecastHour = newhour;
     } else {
       const newhour = '18';
-      const newPrefix = hourPrefixBefore.replace(hours, newhour);
+      const newPrefix = hourPrefixBefore.replace(`/${hours}`, `/${newhour}`);
       endPrefix = `${newPrefix}/atmos/`;
       files = await getAWSForecastKeys(
         client,
@@ -174,7 +174,6 @@ const downloadFilesGfsAWS = async (databaseTimestamp, forecastConfigName) => {
     }
   }
   if (files === null) return null;
-
   const forecastDate = hourPrefix.match(/(?<=gfs\.)[0-9]{8}/)[0];
   // get timestamp from forecastDate and hour
   const dateSting = `${forecastDate.slice(0, 4)}-${forecastDate.slice(
