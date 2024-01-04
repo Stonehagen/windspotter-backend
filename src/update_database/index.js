@@ -1,6 +1,3 @@
-/* eslint-disable function-paren-newline */
-/* eslint-disable implicit-arrow-linebreak */
-/* eslint-disable no-console */
 const fs = require('fs');
 const config = require('../config');
 const {
@@ -23,6 +20,7 @@ const {
 } = require('../convert_grib/netCdf2json');
 const { ForecastInfo } = require('../models');
 const { getForecastInfo } = require('../methods/forecastInfos');
+const { compileSpotForecasts } = require('../methods/updateDatabase');
 
 const getFiles = (filePath) => {
   const files = fs.readdirSync(filePath);
@@ -118,6 +116,8 @@ const convertAllGfsToJSON = async (
   await convertNetCDFToJson(filesList, forecastInfo, forecastConfigName);
 };
 
+const stitchForecasts = async () => {};
+
 const updateDatabase = async (forecastConfigName, wgrib2, forecastMap) => {
   forecastName = config[forecastConfigName].forecastName;
   dataValues = config[forecastConfigName].dataValues;
@@ -172,10 +172,12 @@ const updateDatabase = async (forecastConfigName, wgrib2, forecastMap) => {
   }
 
   console.log('updated Database');
-
   console.log('delete files');
   await deleteFiles(`./grib_data_${forecastConfigName}`);
   console.log('deleted files');
+  console.log('stiching Forecasts');
+  await compileSpotForecasts();
+  console.log('stiched Forecasts');
   console.log('Database is up to date');
   return true;
 };
