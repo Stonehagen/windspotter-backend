@@ -10,6 +10,33 @@ const decompressBzip2 = require('decompress-bzip2');
 
 const config = require('../config');
 
+const getFileTimestamps = (files) => {
+  const dateNow = new Date();
+  return files.map((file) => {
+    // split the date Sting and create a timestamp from it
+    const modDateArr = file.rawModifiedAt.split(' ');
+    const timestamp = new Date(
+      `${modDateArr[0]} ${modDateArr[1]}, ${dateNow.getFullYear()} ${
+        modDateArr[2]
+      }+00:00`,
+    );
+    // Jan 01 cornercase
+    if (timestamp > dateNow) {
+      timestamp.setFullYear(timestamp.getFullYear() - 1);
+    }
+    return timestamp;
+  });
+};
+
+
+const getServerTimestamp = (fileList) => {
+  // reduce array to only get the required values
+  const sortedFiles = fileList.filter((file) => dataValues.includes(file.name));
+  const fileTimestamps = getFileTimestamps(sortedFiles);
+  // return latest Timestamp from folder
+  return new Date(Math.max(...fileTimestamps));
+}
+
 const getNextForecastTimeHour = (forecastTimes) => {
   // convert Strings into Numbers
   const forecastTimesNumbers = forecastTimes.map((hour) => parseInt(hour, 10));

@@ -2,7 +2,6 @@ const fs = require('fs');
 const config = require('../config');
 const {
   downloadFiles,
-  downloadFilesGFS,
   downloadFilesGfsAWS,
 } = require('../ftp');
 const {
