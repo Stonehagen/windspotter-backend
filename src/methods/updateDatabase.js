@@ -139,6 +139,16 @@ const compressSpotForecast = async (id) => {
     ),
   }[0];
 
+  // if there is any forecast missing, retorn empty forecast
+  if (
+    !waveForecast ||
+    !shortRangeWeather ||
+    !midRangeWeather ||
+    !longRangeWeather
+  ) {
+    return;
+  }
+
   const spotForecast = {
     forecastModels: {},
     forecast: {
