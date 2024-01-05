@@ -102,6 +102,9 @@ const compressSpotForecast = async (id) => {
   };
 
   const getLastForecastDay = (forecast) => {
+    if (!forecast) {
+      return new Date(0);
+    }
     const lastDay = Object.keys(forecast)
       .sort((a, b) => new Date(a) - new Date(b))
       .pop();
@@ -115,38 +118,82 @@ const compressSpotForecast = async (id) => {
   });
 
   // get the waveForecast cwam
-  const waveForecast = spot.forecasts.filter(
+  let waveForecast = spot.forecasts.filter(
     (forecast) => forecast.forecastInfo.name === 'cwam',
   )[0];
 
   // get the shortRangeWeather icon-d2
-  const shortRangeWeather = {
+  let shortRangeWeather = {
     ...spot.forecasts.filter(
       (forecast) => forecast.forecastInfo.name === 'icon-d2',
     ),
   }[0];
 
   // get the midRangeWeather: Icon-eu
-  const midRangeWeather = {
+  let midRangeWeather = {
     ...spot.forecasts.filter(
       (forecast) => forecast.forecastInfo.name === 'icon-eu',
     ),
   }[0];
 
-  const longRangeWeather = {
+  let longRangeWeather = {
     ...spot.forecasts.filter(
       (forecast) => forecast.forecastInfo.name === 'gfsAWS',
     ),
   }[0];
 
-  // if there is any forecast missing, retorn empty forecast
   if (
-    !waveForecast ||
-    !shortRangeWeather ||
-    !midRangeWeather ||
+    !waveForecast &&
+    !shortRangeWeather &&
+    !midRangeWeather &&
     !longRangeWeather
   ) {
     return;
+  }
+
+  if (!waveForecast) {
+    waveForecast = {
+      mwd: [],
+      swh: [],
+      tm10: [],
+      forecastInfo: { time: new Date(0) },
+    };
+  }
+
+  if (!shortRangeWeather) {
+    shortRangeWeather = {
+      t_2m: [],
+      v_10m: [],
+      u_10m: [],
+      vmax_10m: [],
+      clct_mod: [],
+      rain_gsp: [],
+      forecastInfo: { time: new Date(0) },
+    };
+  }
+
+  if (!midRangeWeather) {
+    midRangeWeather = {
+      t_2m: [],
+      v_10m: [],
+      u_10m: [],
+      vmax_10m: [],
+      clct_mod: [],
+      rain_gsp: [],
+      forecastInfo: { time: new Date(0) },
+    };
+  }
+
+  if (!longRangeWeather) {
+    longRangeWeather = {
+      t_2m: [],
+      v_10m: [],
+      u_10m: [],
+      vmax_10m: [],
+      clct_mod: [],
+      rain_gsp: [],
+      forecastInfo: { time: new Date(0) },
+    };
   }
 
   const spotForecast = {
@@ -300,16 +347,35 @@ const compressSpotForecast = async (id) => {
         t: spotForecast.forecast.t_2m[time]
           ? getTemperature(spotForecast.forecast.t_2m[time])
           : lastForecast.t,
-        dir: getWindDirection(spotForecast.forecast.v_10m[time], spotForecast.forecast.u_10m[time]),
-        ws: getWindSpeed(spotForecast.forecast.v_10m[time], spotForecast.forecast.u_10m[time]),
+        dir: getWindDirection(
+          spotForecast.forecast.v_10m[time],
+          spotForecast.forecast.u_10m[time],
+        ),
+        ws: getWindSpeed(
+          spotForecast.forecast.v_10m[time],
+          spotForecast.forecast.u_10m[time],
+        ),
         wsMax: spotForecast.forecast.vmax_10m[time]
           ? spotForecast.forecast.vmax_10m[time]
-          : getWindSpeed(spotForecast.forecast.v_10m[time], spotForecast.forecast.u_10m[time]),
-        clouds: spotForecast.forecast.clct_mod[time] ? spotForecast.forecast.clct_mod[time] : 0,
-        rain: spotForecast.forecast.rain_gsp[time] ? spotForecast.forecast.rain_gsp[time] : 0,
-        waveDir: spotForecast.forecast.mwd[time] ? spotForecast.forecast.mwd[time] : 0,
-        waveHeight: spotForecast.forecast.swh[time] ? spotForecast.forecast.swh[time] : 0,
-        wavePeriod: spotForecast.forecast.tm10[time] ? spotForecast.forecast.tm10[time] : 0,
+          : getWindSpeed(
+              spotForecast.forecast.v_10m[time],
+              spotForecast.forecast.u_10m[time],
+            ),
+        clouds: spotForecast.forecast.clct_mod[time]
+          ? spotForecast.forecast.clct_mod[time]
+          : 0,
+        rain: spotForecast.forecast.rain_gsp[time]
+          ? spotForecast.forecast.rain_gsp[time]
+          : 0,
+        waveDir: spotForecast.forecast.mwd[time]
+          ? spotForecast.forecast.mwd[time]
+          : 0,
+        waveHeight: spotForecast.forecast.swh[time]
+          ? spotForecast.forecast.swh[time]
+          : 0,
+        wavePeriod: spotForecast.forecast.tm10[time]
+          ? spotForecast.forecast.tm10[time]
+          : 0,
       });
     }
   }
